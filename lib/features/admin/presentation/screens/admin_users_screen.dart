@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/account_status.dart';
 import '../../domain/entities/admin_user_summary.dart';
+import '../../domain/entities/user_role.dart';
 import '../providers/admin_providers.dart';
 import 'admin_user_detail_screen.dart';
 
@@ -96,7 +97,7 @@ class _AdminUsersScreenState extends ConsumerState<AdminUsersScreen> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<AccountStatus?>(
-                        value: _statusFilter,
+                        initialValue: _statusFilter,
                         decoration: const InputDecoration(
                           labelText: 'Status filter',
                           border: OutlineInputBorder(),

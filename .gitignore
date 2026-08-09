@@ -51,5 +51,8 @@ app.*.map.json
 *.keystore
 google-services.json
 GoogleService-Info.plist
-firebase_options.dart
+# firebase_options.dart is intentionally tracked: it contains no hardcoded
+# secrets, only String.fromEnvironment() reads with empty defaults. A real
+# FlutterFire-CLI-generated file WITH embedded keys should NOT be committed —
+# if you ever regenerate this file with real inline values, re-add it here.
 **/secrets/

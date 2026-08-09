@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/entities/account_status.dart';
 import '../../domain/entities/admin_user_summary.dart';
+import '../../domain/entities/user_role.dart';
 import '../providers/admin_providers.dart';
 
 /// Read-only user detail view. Admin actions (status/role/verify changes)
