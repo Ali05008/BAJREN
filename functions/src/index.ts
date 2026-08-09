@@ -1,5 +1,5 @@
 /**
- * BAJREN Admin Cloud Functions.
+ * BAJREN Admin Cloud Functions (2nd gen / v2 callable API).
  *
  * Privilege checks live HERE, not in the Flutter app. The client only hides
  * buttons for UX; every callable below independently re-verifies auth,
@@ -9,20 +9,22 @@
  * `signaling/`, messaging, or the general user-facing status system.
  */
 import * as admin from "firebase-admin";
-import * as functions from "firebase-functions";
+import { CallableRequest, HttpsError, onCall } from "firebase-functions/v2/https";
 import {
   ACCOUNT_STATUSES,
-  AccountStatus,
-  Permission,
   REPORT_STATUSES,
-  ReportStatus,
   ROLE_RANK,
-  Role,
   isValidAccountStatus,
   isValidReportStatus,
   isValidRole,
   permissionForStatusChange,
   roleHasPermission,
+} from "./permissions";
+import type {
+  AccountStatus,
+  Permission,
+  ReportStatus,
+  Role,
 } from "./permissions";
 
 admin.initializeApp();
@@ -32,30 +34,30 @@ const db = admin.database();
 // Auth / permission helpers
 // ---------------------------------------------------------------------------
 
-function roleOf(context: functions.https.CallableContext): Role {
-  const role = context.auth?.token?.role as string | undefined;
+function roleOf(request: CallableRequest<unknown>): Role {
+  const role = request.auth?.token?.role as string | undefined;
   return isValidRole(role) ? role : "USER";
 }
 
-function requireStaff(context: functions.https.CallableContext): Role {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Sign in required");
+function requireStaff(request: CallableRequest<unknown>): Role {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in required");
   }
-  const role = roleOf(context);
+  const role = roleOf(request);
   if (role === "USER") {
-    throw new functions.https.HttpsError("permission-denied", "Staff only");
+    throw new HttpsError("permission-denied", "Staff only");
   }
   return role;
 }
 
 /** Requires staff AND the specific permission for this operation. */
 function requirePermission(
-  context: functions.https.CallableContext,
+  request: CallableRequest<unknown>,
   permission: Permission
 ): Role {
-  const role = requireStaff(context);
+  const role = requireStaff(request);
   if (!roleHasPermission(role, permission)) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       "permission-denied",
       `Role ${role} lacks permission ${permission}`
     );
@@ -64,9 +66,9 @@ function requirePermission(
 }
 
 /** Blocks acting on your own account through these callables (avoid lockout). */
-function assertNotSelf(context: functions.https.CallableContext, targetUserId: string) {
-  if (context.auth?.uid === targetUserId) {
-    throw new functions.https.HttpsError(
+function assertNotSelf(request: CallableRequest<unknown>, targetUserId: string) {
+  if (request.auth?.uid === targetUserId) {
+    throw new HttpsError(
       "failed-precondition",
       "You cannot perform this action on your own account"
     );
@@ -76,7 +78,7 @@ function assertNotSelf(context: functions.https.CallableContext, targetUserId: s
 /** Blocks acting on a peer-or-higher-ranked account (e.g. ADMIN cannot ban ADMIN/SUPER_ADMIN). */
 function assertCanActOnTarget(callerRole: Role, targetRole: Role) {
   if (ROLE_RANK[targetRole] >= ROLE_RANK[callerRole]) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       "permission-denied",
       "Cannot act on an account with an equal or higher role"
     );
@@ -86,7 +88,7 @@ function assertCanActOnTarget(callerRole: Role, targetRole: Role) {
 function requireNonEmptyString(value: unknown, field: string): string {
   const str = typeof value === "string" ? value.trim() : "";
   if (!str) {
-    throw new functions.https.HttpsError("invalid-argument", `${field} is required`);
+    throw new HttpsError("invalid-argument", `${field} is required`);
   }
   return str;
 }
@@ -160,8 +162,8 @@ function mapUserRecord(userId: string, node: Record<string, unknown> | null, rol
 // 1. Dashboard stats
 // ---------------------------------------------------------------------------
 
-export const adminGetDashboardStats = functions.https.onCall(async (_data, context) => {
-  requirePermission(context, "VIEW_ANALYTICS");
+export const adminGetDashboardStats = onCall(async (request) => {
+  requirePermission(request, "VIEW_ANALYTICS");
 
   const [usersSnap, reportsSnap] = await Promise.all([
     db.ref("users").once("value"),
@@ -210,12 +212,13 @@ export const adminGetDashboardStats = functions.https.onCall(async (_data, conte
 // 2. Search users
 // ---------------------------------------------------------------------------
 
-export const adminSearchUsers = functions.https.onCall(async (data, context) => {
-  requirePermission(context, "VIEW_USERS");
+export const adminSearchUsers = onCall(async (request) => {
+  requirePermission(request, "VIEW_USERS");
+  const data = (request.data ?? {}) as Record<string, unknown>;
 
-  const rawQuery = typeof data?.query === "string" ? data.query.trim().toLowerCase() : "";
-  const status = isValidAccountStatus(data?.status) ? (data.status as AccountStatus) : null;
-  const limit = Math.min(Math.max(Number(data?.limit) || 50, 1), 200);
+  const rawQuery = typeof data.query === "string" ? data.query.trim().toLowerCase() : "";
+  const status = isValidAccountStatus(data.status) ? (data.status as AccountStatus) : null;
+  const limit = Math.min(Math.max(Number(data.limit) || 50, 1), 200);
 
   const [usersSnap, rolesSnap] = await Promise.all([
     db.ref("users").once("value"),
@@ -248,9 +251,10 @@ export const adminSearchUsers = functions.https.onCall(async (data, context) => 
 // 3. Get single user
 // ---------------------------------------------------------------------------
 
-export const adminGetUser = functions.https.onCall(async (data, context) => {
-  requirePermission(context, "VIEW_USER_DETAILS");
-  const userId = requireNonEmptyString(data?.userId, "userId");
+export const adminGetUser = onCall(async (request) => {
+  requirePermission(request, "VIEW_USER_DETAILS");
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  const userId = requireNonEmptyString(data.userId, "userId");
 
   const [userSnap, role] = await Promise.all([
     db.ref(`users/${userId}`).once("value"),
@@ -266,22 +270,23 @@ export const adminGetUser = functions.https.onCall(async (data, context) => {
 // 4. Set account status
 // ---------------------------------------------------------------------------
 
-export const adminSetAccountStatus = functions.https.onCall(async (data, context) => {
-  const userId = requireNonEmptyString(data?.userId, "userId");
-  const status = data?.status;
-  const reason = data?.reason ? String(data.reason) : null;
-  const suspendedUntil = data?.suspendedUntil ? String(data.suspendedUntil) : null;
+export const adminSetAccountStatus = onCall(async (request) => {
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  const userId = requireNonEmptyString(data.userId, "userId");
+  const status = data.status;
+  const reason = data.reason ? String(data.reason) : null;
+  const suspendedUntil = data.suspendedUntil ? String(data.suspendedUntil) : null;
 
   if (!isValidAccountStatus(status)) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       "invalid-argument",
       `status must be one of: ${ACCOUNT_STATUSES.join(", ")}`
     );
   }
 
-  assertNotSelf(context, userId);
-  const [callerRole, targetRole, currentStatus] = await Promise.all([
-    Promise.resolve(requireStaff(context)),
+  assertNotSelf(request, userId);
+  const callerRole = requireStaff(request);
+  const [targetRole, currentStatus] = await Promise.all([
     getRole(userId),
     getStatus(userId),
   ]);
@@ -289,7 +294,7 @@ export const adminSetAccountStatus = functions.https.onCall(async (data, context
 
   const neededPermission = permissionForStatusChange(status, currentStatus);
   if (!roleHasPermission(callerRole, neededPermission)) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       "permission-denied",
       `Role ${callerRole} lacks permission ${neededPermission}`
     );
@@ -308,7 +313,7 @@ export const adminSetAccountStatus = functions.https.onCall(async (data, context
   await admin.auth().updateUser(userId, { disabled: shouldDisableAuth });
 
   await writeAudit({
-    actorId: context.auth!.uid,
+    actorId: request.auth!.uid,
     actorRole: callerRole,
     action: "SET_ACCOUNT_STATUS",
     targetUserId: userId,
@@ -323,22 +328,23 @@ export const adminSetAccountStatus = functions.https.onCall(async (data, context
 // 5. Set user role
 // ---------------------------------------------------------------------------
 
-export const adminSetUserRole = functions.https.onCall(async (data, context) => {
-  const callerRole = requirePermission(context, "MANAGE_ROLES");
-  const userId = requireNonEmptyString(data?.userId, "userId");
-  const newRole = data?.role;
+export const adminSetUserRole = onCall(async (request) => {
+  const callerRole = requirePermission(request, "MANAGE_ROLES");
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  const userId = requireNonEmptyString(data.userId, "userId");
+  const newRole = data.role;
 
   if (!isValidRole(newRole)) {
-    throw new functions.https.HttpsError("invalid-argument", "role is invalid");
+    throw new HttpsError("invalid-argument", "role is invalid");
   }
-  assertNotSelf(context, userId);
+  assertNotSelf(request, userId);
 
   const targetRole = await getRole(userId);
   assertCanActOnTarget(callerRole, targetRole);
 
   // Promoting someone TO SUPER_ADMIN is the most sensitive op: extra gate.
   if (newRole === "SUPER_ADMIN" && !roleHasPermission(callerRole, "MANAGE_ADMINS")) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       "permission-denied",
       "Only SUPER_ADMIN can grant SUPER_ADMIN"
     );
@@ -349,6 +355,7 @@ export const adminSetUserRole = functions.https.onCall(async (data, context) => 
   const targetUserRecord = await admin.auth().getUser(userId);
   const existingClaims = targetUserRecord.customClaims ?? {};
   await admin.auth().setCustomUserClaims(userId, { ...existingClaims, role: newRole });
+
   await db.ref().update({
     [`admin_roles/${userId}`]: newRole,
     [`users/${userId}/role`]: newRole,
@@ -356,7 +363,7 @@ export const adminSetUserRole = functions.https.onCall(async (data, context) => 
   });
 
   await writeAudit({
-    actorId: context.auth!.uid,
+    actorId: request.auth!.uid,
     actorRole: callerRole,
     action: "SET_USER_ROLE",
     targetUserId: userId,
@@ -371,13 +378,14 @@ export const adminSetUserRole = functions.https.onCall(async (data, context) => 
 // 6. Set verified
 // ---------------------------------------------------------------------------
 
-export const adminSetVerified = functions.https.onCall(async (data, context) => {
-  const userId = requireNonEmptyString(data?.userId, "userId");
-  const verified = data?.verified === true;
+export const adminSetVerified = onCall(async (request) => {
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  const userId = requireNonEmptyString(data.userId, "userId");
+  const verified = data.verified === true;
   const permission: Permission = verified ? "VERIFY_USER" : "REVOKE_VERIFICATION";
-  const callerRole = requirePermission(context, permission);
+  const callerRole = requirePermission(request, permission);
 
-  assertNotSelf(context, userId);
+  assertNotSelf(request, userId);
   const targetRole = await getRole(userId);
   assertCanActOnTarget(callerRole, targetRole);
 
@@ -387,7 +395,7 @@ export const adminSetVerified = functions.https.onCall(async (data, context) => 
   });
 
   await writeAudit({
-    actorId: context.auth!.uid,
+    actorId: request.auth!.uid,
     actorRole: callerRole,
     action: verified ? "VERIFY_USER" : "REVOKE_VERIFICATION",
     targetUserId: userId,
@@ -402,11 +410,12 @@ export const adminSetVerified = functions.https.onCall(async (data, context) => 
 // 7. List reports
 // ---------------------------------------------------------------------------
 
-export const adminListReports = functions.https.onCall(async (data, context) => {
-  requirePermission(context, "VIEW_REPORTS");
+export const adminListReports = onCall(async (request) => {
+  requirePermission(request, "VIEW_REPORTS");
+  const data = (request.data ?? {}) as Record<string, unknown>;
 
-  const status = isValidReportStatus(data?.status) ? (data.status as ReportStatus) : null;
-  const limit = Math.min(Math.max(Number(data?.limit) || 50, 1), 200);
+  const status = isValidReportStatus(data.status) ? (data.status as ReportStatus) : null;
+  const limit = Math.min(Math.max(Number(data.limit) || 50, 1), 200);
 
   const snap = await db.ref("reports").once("value");
   const reports: Record<string, unknown>[] = [];
@@ -427,13 +436,14 @@ export const adminListReports = functions.https.onCall(async (data, context) => 
 // 8. Update report status
 // ---------------------------------------------------------------------------
 
-export const adminUpdateReportStatus = functions.https.onCall(async (data, context) => {
-  const callerRole = requirePermission(context, "MANAGE_REPORTS");
-  const reportId = requireNonEmptyString(data?.reportId, "reportId");
-  const status = data?.status;
+export const adminUpdateReportStatus = onCall(async (request) => {
+  const callerRole = requirePermission(request, "MANAGE_REPORTS");
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  const reportId = requireNonEmptyString(data.reportId, "reportId");
+  const status = data.status;
 
   if (!isValidReportStatus(status)) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       "invalid-argument",
       `status must be one of: ${REPORT_STATUSES.join(", ")}`
     );
@@ -442,13 +452,13 @@ export const adminUpdateReportStatus = functions.https.onCall(async (data, conte
   const reportRef = db.ref(`reports/${reportId}`);
   const snap = await reportRef.once("value");
   if (!snap.exists()) {
-    throw new functions.https.HttpsError("not-found", "Report not found");
+    throw new HttpsError("not-found", "Report not found");
   }
 
   const updates: Record<string, unknown> = { status };
   if (status !== "open") {
     updates.resolvedAt = nowIso();
-    updates.resolverId = context.auth!.uid;
+    updates.resolverId = request.auth!.uid;
   } else {
     updates.resolvedAt = null;
     updates.resolverId = null;
@@ -456,7 +466,7 @@ export const adminUpdateReportStatus = functions.https.onCall(async (data, conte
   await reportRef.update(updates);
 
   await writeAudit({
-    actorId: context.auth!.uid,
+    actorId: request.auth!.uid,
     actorRole: callerRole,
     action: "UPDATE_REPORT_STATUS",
     targetUserId: (snap.val() as Record<string, unknown>)?.reportedUserId as string | undefined,
@@ -471,9 +481,10 @@ export const adminUpdateReportStatus = functions.https.onCall(async (data, conte
 // 9. List audit logs
 // ---------------------------------------------------------------------------
 
-export const adminListAuditLogs = functions.https.onCall(async (data, context) => {
-  requirePermission(context, "VIEW_AUDIT_LOGS");
-  const limit = Math.min(Math.max(Number(data?.limit) || 100, 1), 500);
+export const adminListAuditLogs = onCall(async (request) => {
+  requirePermission(request, "VIEW_AUDIT_LOGS");
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  const limit = Math.min(Math.max(Number(data.limit) || 100, 1), 500);
 
   const snap = await db.ref("audit_logs").orderByKey().limitToLast(limit).once("value");
   const logs: Record<string, unknown>[] = [];
