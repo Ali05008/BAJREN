@@ -1,0 +1,12 @@
+{
+  "name": "bajren-rules-tests",
+  "private": true,
+  "engines": { "node": "20" },
+  "scripts": {
+    "test": "mocha rtdb.rules.test.js --timeout 20000"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "mocha": "^10.7.3"
+  }
+}

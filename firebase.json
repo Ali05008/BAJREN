@@ -1,0 +1,16 @@
+{
+  "database": {
+    "rules": "docs/firebase_database.rules.json"
+  },
+  "functions": {
+    "source": "functions"
+  },
+  "emulators": {
+    "database": {
+      "port": 9000
+    },
+    "ui": {
+      "enabled": false
+    }
+  }
+}
