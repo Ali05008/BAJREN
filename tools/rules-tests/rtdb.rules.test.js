@@ -65,9 +65,13 @@ beforeEach(async () => {
   await testEnv.clearDatabase();
   // Seed as a privileged (rules-bypassing) context — mirrors how the
   // Admin SDK inside Cloud Functions actually writes this data.
+  // IMPORTANT: call context.database() exactly once per context and reuse
+  // it — calling it again on the same context re-triggers useEmulator()
+  // internally and throws "instance has already been initialized".
   await testEnv.withSecurityRulesDisabled(async (context) => {
-    await context.database().ref(`users/${UID}`).set(SEED_USER);
-    await context.database().ref(`admin_roles/${UID}`).set("USER");
+    const db = context.database();
+    await db.ref(`users/${UID}`).set(SEED_USER);
+    await db.ref(`admin_roles/${UID}`).set("USER");
   });
 });
 
@@ -192,12 +196,13 @@ describe("users/$uid — protected admin fields", () => {
 
   it("Backend/Admin SDK (rules bypassed) CAN still set role/status/isVerified normally", async () => {
     await testEnv.withSecurityRulesDisabled(async (context) => {
-      await context.database().ref(`users/${UID}`).update({
+      const db = context.database();
+      await db.ref(`users/${UID}`).update({
         role: "MODERATOR",
         status: "SUSPENDED",
         isVerified: true,
       });
-      const snap = await context.database().ref(`users/${UID}`).once("value");
+      const snap = await db.ref(`users/${UID}`).once("value");
       const val = snap.val();
       assert.strictEqual(val.role, "MODERATOR");
       assert.strictEqual(val.status, "SUSPENDED");
