@@ -42,7 +42,7 @@ void main() {
 
     expect(find.text(AuthStrings.selectCountry), findsOneWidget);
 
-    await tester.enterText(find.byKey(const Key('country_search_field')), 'مصر');
+    await tester.enterText(find.byKey(const Key('country_search_field')), 'مص');
     await tester.pumpAndSettle();
 
     expect(find.text('مصر'), findsOneWidget);
@@ -58,7 +58,11 @@ void main() {
 
     await tester.enterText(find.byType(TextField), '0501234567');
     await tester.tap(find.text(AuthStrings.sendCode));
-    await tester.pumpAndSettle();
+    // Bounded, not pumpAndSettle: landing on OtpVerificationScreen starts
+    // its own live resend-cooldown Timer.periodic, which can make
+    // pumpAndSettle hang waiting for a 'settled' state that never comes.
+    await tester.pump();
+    await tester.pump();
 
     expect(find.byType(OtpVerificationScreen), findsOneWidget);
     expect(find.textContaining('+966501234567'), findsOneWidget);

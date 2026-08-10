@@ -26,11 +26,15 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    // NOTE: this screen keeps a live Timer.periodic (resend cooldown) running
+    // for up to 60s, so pumpAndSettle() can hang waiting for it to go idle.
+    // Use bounded pump() calls instead everywhere the screen stays mounted.
+    await tester.pump();
 
     await tester.enterText(find.byType(TextField), '000000');
     await tester.tap(find.text(AuthStrings.verify));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
 
     expect(find.text(AuthStrings.errorInvalidOtp), findsOneWidget);
     expect(repo.currentUser, isNull);
@@ -52,11 +56,12 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     await tester.enterText(find.byType(TextField), DemoAuthRepository.demoOtpCode);
     await tester.tap(find.text(AuthStrings.verify));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
 
     expect(repo.currentUser, isNotNull);
   });
@@ -117,12 +122,20 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('open'));
+    // Safe: no OTP screen (and thus no live timer) mounted yet.
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('open'));
+    // Bounded: lets the push transition (~300ms) finish without risking a
+    // hang once the OTP screen's own timer starts ticking.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
     expect(find.byType(OtpVerificationScreen), findsOneWidget);
+
     await tester.tap(find.text(AuthStrings.editPhoneNumber));
+    // Safe again: popping disposes OtpVerificationScreen, which cancels its
+    // timer, so there's nothing left to prevent settling.
     await tester.pumpAndSettle();
 
     expect(find.byType(OtpVerificationScreen), findsNothing);
