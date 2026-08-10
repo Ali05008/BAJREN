@@ -101,12 +101,9 @@ jobs:
       - name: Build debug APK
         run: flutter build apk --debug
 
-      - name: TEMP - Print debug SHA fingerprints
-        run: |
-          keytool -list -v \
-            -keystore ~/.android/debug.keystore \
-            -alias androiddebugkey \
-            -storepass android -keypass android
+      - name: TEMP - Print SHA fingerprints (Gradle signingReport)
+        working-directory: android
+        run: ./gradlew signingReport
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
