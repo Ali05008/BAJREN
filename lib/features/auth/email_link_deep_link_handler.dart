@@ -4,10 +4,10 @@ import 'dart:developer' as developer;
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 
-import '../data/firebase_auth_repository.dart';
-import '../data/pending_email_link_store.dart';
-import '../presentation/auth_strings.dart';
-import '../presentation/screens/complete_email_link_screen.dart';
+import 'data/firebase_auth_repository.dart';
+import 'data/pending_email_link_store.dart';
+import 'presentation/auth_strings.dart';
+import 'presentation/screens/complete_email_link_screen.dart';
 
 /// Listens for incoming Android App Links and completes email-link
 /// sign-in when one arrives. Works whether the app was already running
