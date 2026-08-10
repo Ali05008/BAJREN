@@ -6,6 +6,16 @@ import '../domain/auth_repository.dart';
 import '../domain/auth_user.dart';
 import '../domain/entities/phone_verification_result.dart';
 
+/// The project's default Firebase Hosting domain. Firebase Authentication
+/// uses this automatically (since the Aug 25, 2025 Dynamic Links shutdown)
+/// to generate email sign-in links for mobile apps — no custom domain or
+/// Firebase Hosting deploy is required. Must match the Android App Links
+/// intent-filter host in AndroidManifest.xml.
+const _kEmailLinkHost = 'bajren-25964.firebaseapp.com';
+
+/// Path Firebase uses for email action links. Do not change.
+const _kEmailLinkContinueUrl = 'https://$_kEmailLinkHost/finishSignIn';
+
 class FirebaseAuthRepository implements AuthRepository {
   FirebaseAuthRepository({FirebaseAuth? auth})
       : _auth = auth ?? FirebaseAuth.instance;
@@ -79,8 +89,6 @@ class FirebaseAuthRepository implements AuthRepository {
       phoneNumber: e164Phone,
       timeout: const Duration(seconds: 60),
       verificationCompleted: (PhoneAuthCredential credential) async {
-        // Android instant verification: the code was auto-retrieved and
-        // confirmed by the platform before the user typed anything.
         try {
           final cred = await _auth.signInWithCredential(credential);
           final user = cred.user;
@@ -104,8 +112,6 @@ class FirebaseAuthRepository implements AuthRepository {
         }
       },
       codeAutoRetrievalTimeout: (String verificationId) {
-        // If neither codeSent nor verificationCompleted fired yet for some
-        // reason, fall back to this so the caller isn't left hanging.
         if (!completer.isCompleted) {
           completer.complete(
             PhoneVerificationResult(verificationId: verificationId),
@@ -129,6 +135,40 @@ class FirebaseAuthRepository implements AuthRepository {
     final cred = await _auth.signInWithCredential(credential);
     final user = cred.user;
     if (user == null) throw StateError('Phone sign-in failed');
+    return _map(user);
+  }
+
+  @override
+  Future<void> sendEmailSignInLink(String email) async {
+    final settings = ActionCodeSettings(
+      url: _kEmailLinkContinueUrl,
+      handleCodeInApp: true,
+      androidPackageName: 'com.bajren.bajren',
+      androidInstallApp: true,
+      androidMinimumVersion: '21',
+    );
+    await _auth.sendSignInLinkToEmail(
+      email: email.trim(),
+      actionCodeSettings: settings,
+    );
+  }
+
+  @override
+  bool isEmailSignInLink(String link) {
+    return _auth.isSignInWithEmailLink(link);
+  }
+
+  @override
+  Future<AuthUser> signInWithEmailLink({
+    required String email,
+    required String emailLink,
+  }) async {
+    final cred = await _auth.signInWithEmailLink(
+      email: email.trim(),
+      emailLink: emailLink,
+    );
+    final user = cred.user;
+    if (user == null) throw StateError('Email link sign-in failed');
     return _map(user);
   }
 }
