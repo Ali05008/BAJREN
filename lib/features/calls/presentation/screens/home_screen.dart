@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../core/di/firebase_ready.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../reports/presentation/report_user_sheet.dart';
 import '../../domain/entities/call.dart';
 import '../providers/active_call_notifier.dart';
 import '../providers/call_providers.dart';
@@ -133,7 +134,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: activeCall.when(
               data: (state) {
                 if (state != null) {
-                  return _CallView(state: state);
+                  return _CallView(state: state, currentUserId: user?.uid);
                 }
                 return _IdleView(
                   calleeController: _calleeController,
@@ -219,14 +220,18 @@ class _IdleView extends StatelessWidget {
 }
 
 class _CallView extends ConsumerWidget {
-  const _CallView({required this.state});
+  const _CallView({required this.state, this.currentUserId});
 
   final dynamic state;
+  final String? currentUserId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final media = state.media;
     final connection = state.connection;
+    final Call call = state.call;
+    final otherUserId =
+        currentUserId == call.callerId ? call.calleeId : call.callerId;
 
     return Stack(
       fit: StackFit.expand,
@@ -258,6 +263,24 @@ class _CallView extends ConsumerWidget {
                 RTCVideoRenderer()..srcObject = media.localStream,
                 mirror: true,
                 objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+              ),
+            ),
+          ),
+        if (otherUserId.isNotEmpty)
+          Positioned(
+            left: 16,
+            top: 16,
+            child: Material(
+              color: Colors.black45,
+              shape: const CircleBorder(),
+              child: IconButton(
+                icon: const Icon(Icons.flag_outlined, color: Colors.white),
+                tooltip: 'Report user',
+                onPressed: () => showReportUserSheet(
+                  context,
+                  targetUserId: otherUserId,
+                  callId: call.id,
+                ),
               ),
             ),
           ),

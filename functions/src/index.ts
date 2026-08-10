@@ -12,9 +12,11 @@ import * as admin from "firebase-admin";
 import { CallableRequest, HttpsError, onCall } from "firebase-functions/v2/https";
 import {
   ACCOUNT_STATUSES,
+  REPORT_REASONS,
   REPORT_STATUSES,
   ROLE_RANK,
   isValidAccountStatus,
+  isValidReportReason,
   isValidReportStatus,
   isValidRole,
   permissionForStatusChange,
@@ -23,6 +25,7 @@ import {
 import type {
   AccountStatus,
   Permission,
+  ReportReason,
   ReportStatus,
   Role,
 } from "./permissions";
@@ -495,4 +498,84 @@ export const adminListAuditLogs = onCall(async (request) => {
   logs.reverse(); // most recent first
 
   return { logs };
+});
+
+// ---------------------------------------------------------------------------
+// 10. Submit a report (any signed-in user — NOT staff-only)
+// ---------------------------------------------------------------------------
+//
+// This is the only writer of the `reports` node: RTDB rules deny direct
+// client writes there entirely (see docs/firebase_database.rules.json), so
+// reporterId cannot be forged and a report cannot be edited after creation
+// by anyone but the Admin SDK.
+
+const REPORT_DUPLICATE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+
+export const submitReport = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in required");
+  }
+  const data = (request.data ?? {}) as Record<string, unknown>;
+
+  const targetUserId = requireNonEmptyString(data.targetUserId, "targetUserId");
+  const reasonInput = data.reason;
+  if (!isValidReportReason(reasonInput)) {
+    throw new HttpsError(
+      "invalid-argument",
+      `reason must be one of: ${REPORT_REASONS.join(", ")}`
+    );
+  }
+  const reason: ReportReason = reasonInput;
+
+  if (request.auth.uid === targetUserId) {
+    throw new HttpsError("invalid-argument", "You cannot report yourself");
+  }
+
+  const description =
+    typeof data.description === "string" && data.description.trim().length > 0
+      ? data.description.trim().slice(0, 1000)
+      : null;
+  // Optional contextual info (e.g. the call this report was filed from).
+  // Only pass through simple string fields — never trust arbitrary objects.
+  const callId = typeof data.callId === "string" ? data.callId.slice(0, 200) : null;
+
+  // Basic duplicate-submission guard: block a second report from the same
+  // reporter against the same target within a short window.
+  const recentSnap = await db
+    .ref("reports")
+    .orderByChild("reporterId")
+    .equalTo(request.auth.uid)
+    .limitToLast(25)
+    .once("value");
+  const now = Date.now();
+  let isDuplicate = false;
+  recentSnap.forEach((child) => {
+    const v = child.val() as Record<string, unknown>;
+    if (v.reportedUserId === targetUserId && typeof v.createdAt === "string") {
+      const ageMs = now - new Date(v.createdAt).getTime();
+      if (ageMs >= 0 && ageMs < REPORT_DUPLICATE_WINDOW_MS) {
+        isDuplicate = true;
+      }
+    }
+    return false;
+  });
+  if (isDuplicate) {
+    throw new HttpsError(
+      "already-exists",
+      "You already reported this user recently"
+    );
+  }
+
+  const reportRef = db.ref("reports").push();
+  await reportRef.set({
+    reporterId: request.auth.uid,
+    reportedUserId: targetUserId,
+    reason,
+    description,
+    callId,
+    status: "open",
+    createdAt: nowIso(),
+  });
+
+  return { ok: true, reportId: reportRef.key };
 });

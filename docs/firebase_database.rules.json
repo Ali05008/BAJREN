@@ -49,9 +49,10 @@
     },
 
     "reports": {
+      ".indexOn": ["reporterId"],
       "$reportId": {
         ".read": "auth != null && (data.child('reporterId').val() === auth.uid || root.child('admin_roles').child(auth.uid).val() === 'MODERATOR' || root.child('admin_roles').child(auth.uid).val() === 'ADMIN' || root.child('admin_roles').child(auth.uid).val() === 'SUPER_ADMIN')",
-        ".write": "auth != null && (!data.exists() && newData.child('reporterId').val() === auth.uid)"
+        ".write": false
       }
     },
 

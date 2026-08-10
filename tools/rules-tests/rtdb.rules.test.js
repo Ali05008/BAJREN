@@ -210,3 +210,64 @@ describe("users/$uid — protected admin fields", () => {
     });
   });
 });
+
+describe("reports — client cannot write directly (submitReport callable only)", () => {
+  const REPORT_ID = "report-1";
+  const REPORT_SEED = {
+    reporterId: UID,
+    reportedUserId: OTHER_UID,
+    reason: "HARASSMENT_ABUSE",
+    description: "Seeded via Admin SDK, mirrors what submitReport writes.",
+    status: "open",
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+
+  beforeEach(async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.database().ref(`reports/${REPORT_ID}`).set(REPORT_SEED);
+    });
+  });
+
+  it("USER cannot create a report by writing directly to reports/", async () => {
+    await assertFails(
+      userDb().ref("reports/new-report").set({
+        reporterId: UID,
+        reportedUserId: OTHER_UID,
+        reason: "HARASSMENT_ABUSE",
+        status: "open",
+        createdAt: new Date().toISOString(),
+      })
+    );
+  });
+
+  it("USER cannot edit an existing report (e.g. change its status) directly", async () => {
+    await assertFails(
+      userDb().ref(`reports/${REPORT_ID}/status`).set("closed")
+    );
+  });
+
+  it("USER cannot delete a report directly", async () => {
+    await assertFails(userDb().ref(`reports/${REPORT_ID}`).remove());
+  });
+
+  it("Reporter CAN read their own report", async () => {
+    await assertSucceeds(userDb().ref(`reports/${REPORT_ID}`).once("value"));
+  });
+
+  it("A different, non-staff user CANNOT read someone else's report", async () => {
+    await assertFails(
+      testEnv.authenticatedContext(OTHER_UID).database().ref(`reports/${REPORT_ID}`).once("value")
+    );
+  });
+
+  it("Backend/Admin SDK (rules bypassed) CAN create and update reports normally", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.database();
+      const ref = db.ref("reports/admin-created");
+      await ref.set(REPORT_SEED);
+      await ref.update({ status: "closed" });
+      const snap = await ref.once("value");
+      assert.strictEqual(snap.val().status, "closed");
+    });
+  });
+});

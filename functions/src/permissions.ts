@@ -75,6 +75,25 @@ export function isValidReportStatus(value: unknown): value is ReportStatus {
   );
 }
 
+// Report reasons a reporting user can pick — must match
+// lib/.../moderation_report.dart `ReportReasonX.wireName`.
+export const REPORT_REASONS = [
+  "HARASSMENT_ABUSE",
+  "INAPPROPRIATE_CONTENT",
+  "IMPERSONATION",
+  "FRAUD_SCAM",
+  "THREATS",
+  "OTHER",
+] as const;
+export type ReportReason = (typeof REPORT_REASONS)[number];
+
+export function isValidReportReason(value: unknown): value is ReportReason {
+  return (
+    typeof value === "string" &&
+    (REPORT_REASONS as readonly string[]).includes(value)
+  );
+}
+
 // Mirrors RolePermissionCatalog.defaults exactly (see admin_permission.dart).
 const MODERATOR_PERMISSIONS: Permission[] = [
   "VIEW_USERS",
