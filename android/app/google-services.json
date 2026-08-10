@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "316537203069",
+    "project_id": "programx-e39cd",
+    "storage_bucket": "programx-e39cd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:316537203069:android:cc1de98bc348a84ebd0414",
+        "android_client_info": {
+          "package_name": "com.example.programx"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAb9X_UOVAZF2IXa5wz_ZdXUlc2ZZncb_s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

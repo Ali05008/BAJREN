@@ -49,8 +49,10 @@ app.*.map.json
 .env.*
 *.jks
 *.keystore
-google-services.json
-GoogleService-Info.plist
+# google-services.json / GoogleService-Info.plist are intentionally tracked:
+# their contents (project id, app id, client-restricted API key) are not
+# secrets on their own — Firebase's real security boundary is server-side
+# RTDB/Functions rules, not hiding this file. The app cannot build without it.
 # firebase_options.dart is intentionally tracked: it contains no hardcoded
 # secrets, only String.fromEnvironment() reads with empty defaults. A real
 # FlutterFire-CLI-generated file WITH embedded keys should NOT be committed —
