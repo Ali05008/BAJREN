@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../domain/auth_repository.dart';
 import '../domain/auth_user.dart';
+import '../domain/entities/phone_verification_result.dart';
 
 class FirebaseAuthRepository implements AuthRepository {
   FirebaseAuthRepository({FirebaseAuth? auth})
@@ -64,5 +67,68 @@ class FirebaseAuthRepository implements AuthRepository {
   @override
   Future<String?> getIdToken({bool forceRefresh = false}) async {
     return _auth.currentUser?.getIdToken(forceRefresh);
+  }
+
+  @override
+  Future<PhoneVerificationResult> startPhoneVerification(
+    String e164Phone,
+  ) async {
+    final completer = Completer<PhoneVerificationResult>();
+
+    await _auth.verifyPhoneNumber(
+      phoneNumber: e164Phone,
+      timeout: const Duration(seconds: 60),
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        // Android instant verification: the code was auto-retrieved and
+        // confirmed by the platform before the user typed anything.
+        try {
+          final cred = await _auth.signInWithCredential(credential);
+          final user = cred.user;
+          if (!completer.isCompleted && user != null) {
+            completer.complete(
+              PhoneVerificationResult(autoVerifiedUser: _map(user)),
+            );
+          }
+        } catch (e) {
+          if (!completer.isCompleted) completer.completeError(e);
+        }
+      },
+      verificationFailed: (FirebaseAuthException e) {
+        if (!completer.isCompleted) completer.completeError(e);
+      },
+      codeSent: (String verificationId, int? resendToken) {
+        if (!completer.isCompleted) {
+          completer.complete(
+            PhoneVerificationResult(verificationId: verificationId),
+          );
+        }
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {
+        // If neither codeSent nor verificationCompleted fired yet for some
+        // reason, fall back to this so the caller isn't left hanging.
+        if (!completer.isCompleted) {
+          completer.complete(
+            PhoneVerificationResult(verificationId: verificationId),
+          );
+        }
+      },
+    );
+
+    return completer.future;
+  }
+
+  @override
+  Future<AuthUser> confirmPhoneCode({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    final credential = PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
+    final cred = await _auth.signInWithCredential(credential);
+    final user = cred.user;
+    if (user == null) throw StateError('Phone sign-in failed');
+    return _map(user);
   }
 }

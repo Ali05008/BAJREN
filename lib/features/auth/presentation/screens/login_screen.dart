@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/di/firebase_ready.dart';
+import '../auth_strings.dart';
 import '../providers/auth_providers.dart';
+import 'phone_login_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -56,6 +58,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: _busy
+                  ? null
+                  : () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const PhoneLoginScreen(),
+                        ),
+                      ),
+              icon: const Icon(Icons.phone_android),
+              label: const Text(AuthStrings.signInWithPhone),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
             TextField(
               controller: _email,
               decoration: const InputDecoration(
