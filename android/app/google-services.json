@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "316537203069",
-    "project_id": "programx-e39cd",
-    "storage_bucket": "programx-e39cd.firebasestorage.app"
+    "project_number": "120840016556",
+    "project_id": "bajren-25964",
+    "storage_bucket": "bajren-25964.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:316537203069:android:cc1de98bc348a84ebd0414",
+        "mobilesdk_app_id": "1:120840016556:android:c30982c39dac3cb1ca4509",
         "android_client_info": {
-          "package_name": "com.example.programx"
+          "package_name": "com.bajren.bajren"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAb9X_UOVAZF2IXa5wz_ZdXUlc2ZZncb_s"
+          "current_key": "AIzaSyAumbWzsv_AzHR9852RuqqzFyBzsul_X90"
         }
       ],
       "services": {
