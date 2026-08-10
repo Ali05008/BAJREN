@@ -169,11 +169,8 @@ void main() {
     expect(find.text('إساءة أو مضايقة'), findsNothing);
   });
 
-  testWidgets('MODERATOR without VIEW_REPORTS still renders the screen shell',
+  testWidgets('renders correctly regardless of role (the shell tile gates access, not this screen)',
       (tester) async {
-    // The screen itself doesn't gate on permission (the shell tile does);
-    // this just confirms the screen still renders for any role without
-    // crashing when access data resolves.
     final repo = _FakeAdminRepository(reports: [_report()]);
     await tester.pumpWidget(_wrap(repository: repo, role: UserRole.moderator));
     await tester.pumpAndSettle();

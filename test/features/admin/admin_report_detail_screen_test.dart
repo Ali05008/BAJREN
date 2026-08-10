@@ -127,9 +127,9 @@ void main() {
     expect(find.textContaining('Mark'), findsWidgets);
   });
 
-  testWidgets('MODERATOR (no MANAGE_REPORTS) sees no status-change actions', (tester) async {
+  testWidgets('USER (no MANAGE_REPORTS) sees no status-change actions', (tester) async {
     await tester.pumpWidget(
-      _wrap(repository: _FakeAdminRepository(), role: UserRole.moderator),
+      _wrap(repository: _FakeAdminRepository(), role: UserRole.user),
     );
     await tester.pumpAndSettle();
 
