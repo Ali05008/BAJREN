@@ -101,15 +101,14 @@ jobs:
       - name: Build debug APK
         run: flutter build apk --debug
 
-      - name: TEMP - Print SHA fingerprints (Gradle signingReport)
-        working-directory: android
-        run: ./gradlew signingReport
+      - name: Rename APK for distribution
+        run: cp build/app/outputs/flutter-apk/app-debug.apk build/app/outputs/flutter-apk/BAJREN-test.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: bajren-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          path: build/app/outputs/flutter-apk/BAJREN-test.apk
           retention-days: 14
 
   build-android-aab:
