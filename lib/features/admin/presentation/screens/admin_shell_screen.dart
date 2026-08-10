@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/admin_permission.dart';
 import '../../domain/entities/user_role.dart';
 import '../providers/admin_providers.dart';
+import 'admin_dashboard_screen.dart';
 import 'admin_users_screen.dart';
 
 /// Shell for future Admin dashboard sections.
@@ -61,6 +62,20 @@ class AdminShellScreen extends ConsumerWidget {
                   title: Text(s),
                   subtitle: const Text('Section scaffold — wire to AdminRepository'),
                   onTap: () {
+                    if (s == 'Dashboard') {
+                      if (!access.can(AdminPermission.viewAnalytics)) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Missing VIEW_ANALYTICS')),
+                        );
+                        return;
+                      }
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const AdminDashboardScreen(),
+                        ),
+                      );
+                      return;
+                    }
                     if (s == 'Users') {
                       if (!access.can(AdminPermission.viewUsers)) {
                         ScaffoldMessenger.of(context).showSnackBar(
