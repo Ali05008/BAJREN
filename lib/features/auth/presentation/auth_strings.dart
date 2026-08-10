@@ -28,4 +28,30 @@ class AuthStrings {
   static const errorTooManyRequests = 'محاولات كثيرة، حاول لاحقًا';
   static const errorGeneric = 'حدث خطأ، حاول مرة أخرى';
   static const errorNetwork = 'تحقق من اتصال الإنترنت وحاول مرة أخرى';
+
+  // Email Link (passwordless) sign-in — active while kActiveAuthMethod ==
+  // AuthMethod.emailLink (see auth_config.dart).
+  static const signInWithEmailLink = 'تسجيل الدخول عبر البريد الإلكتروني';
+  static const emailLabel = 'البريد الإلكتروني';
+  static const emailHint = 'ادخل بريدك الإلكتروني';
+  static const sendLink = 'إرسال رابط الدخول';
+  static const invalidEmail = 'البريد الإلكتروني غير صحيح';
+
+  static const linkSentTitle = 'تم إرسال رابط الدخول';
+  static String linkSentTo(String email) =>
+      'أرسلنا رابط تسجيل الدخول إلى $email. افتح الرابط من نفس هذا الجهاز لإكمال تسجيل الدخول.';
+  static const openEmailApp = 'فتح تطبيق البريد';
+  static const resendLink = 'إعادة إرسال الرابط';
+  static String resendLinkIn(int seconds) => 'يمكنك إعادة الإرسال بعد $seconds ثانية';
+  static const editEmail = 'تعديل البريد الإلكتروني';
+
+  static const verifyingLink = 'جارٍ التحقق من الرابط...';
+  static const errorLinkInvalidOrUsed =
+      'هذا الرابط غير صالح أو تم استخدامه من قبل. اطلب رابطًا جديدًا.';
+  static const errorLinkExpired = 'انتهت صلاحية الرابط، اطلب رابطًا جديدًا';
+  static const errorEmailMismatch =
+      'افتح الرابط من نفس الجهاز الذي طلبت منه رابط الدخول، أو أدخل نفس البريد المستخدم';
+  static const errorNoPendingEmail =
+      'لم نجد طلب تسجيل دخول سابق على هذا الجهاز. أدخل بريدك لإكمال الدخول.';
+  static const signInSuccess = 'تم تسجيل الدخول بنجاح';
 }
