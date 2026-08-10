@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/di/firebase_ready.dart';
+import '../../auth_config.dart';
 import '../auth_strings.dart';
 import '../providers/auth_providers.dart';
+import 'email_login_screen.dart';
 import 'phone_login_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -58,20 +60,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _busy
-                  ? null
-                  : () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const PhoneLoginScreen(),
+            // Primary sign-in CTA. Controlled by kActiveAuthMethod
+            // (auth_config.dart) so switching back to Phone OTP later
+            // (once the project is on Firebase Blaze) is a one-line
+            // change, not a rebuild. Phone OTP screens/code below are
+            // kept fully intact either way.
+            if (kActiveAuthMethod == AuthMethod.emailLink)
+              FilledButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const EmailLoginScreen(),
+                          ),
                         ),
-                      ),
-              icon: const Icon(Icons.phone_android),
-              label: const Text(AuthStrings.signInWithPhone),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
+                icon: const Icon(Icons.mark_email_read_outlined),
+                label: const Text(AuthStrings.signInWithEmailLink),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
+              )
+            else
+              FilledButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const PhoneLoginScreen(),
+                          ),
+                        ),
+                icon: const Icon(Icons.phone_android),
+                label: const Text(AuthStrings.signInWithPhone),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
               ),
-            ),
             const SizedBox(height: 16),
             const Divider(),
             const SizedBox(height: 8),
