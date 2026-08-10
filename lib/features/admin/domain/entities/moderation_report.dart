@@ -64,6 +64,7 @@ class ModerationReport extends Equatable {
   final String? reportedContentId;
   final String reason;
   final String? description;
+  final String? callId;
   final ReportStatus status;
   final DateTime createdAt;
   final DateTime? resolvedAt;
@@ -76,6 +77,7 @@ class ModerationReport extends Equatable {
     this.reportedContentId,
     required this.reason,
     this.description,
+    this.callId,
     required this.status,
     required this.createdAt,
     this.resolvedAt,

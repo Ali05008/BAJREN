@@ -141,6 +141,7 @@ class AdminRepositoryImpl implements AdminRepository {
         reportedContentId: m['reportedContentId'] as String?,
         reason: m['reason'] as String? ?? '',
         description: m['description'] as String?,
+        callId: m['callId'] as String?,
         status: ReportStatus.values.firstWhere(
           (s) => s.name == m['status'],
           orElse: () => ReportStatus.open,

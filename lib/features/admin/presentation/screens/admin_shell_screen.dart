@@ -5,6 +5,7 @@ import '../../domain/entities/admin_permission.dart';
 import '../../domain/entities/user_role.dart';
 import '../providers/admin_providers.dart';
 import 'admin_dashboard_screen.dart';
+import 'admin_reports_screen.dart';
 import 'admin_users_screen.dart';
 
 /// Shell for future Admin dashboard sections.
@@ -86,6 +87,20 @@ class AdminShellScreen extends ConsumerWidget {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => const AdminUsersScreen(),
+                        ),
+                      );
+                      return;
+                    }
+                    if (s == 'Reports') {
+                      if (!access.can(AdminPermission.viewReports)) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Missing VIEW_REPORTS')),
+                        );
+                        return;
+                      }
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const AdminReportsScreen(),
                         ),
                       );
                       return;
