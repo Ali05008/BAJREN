@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 import '../domain/contact.dart';
@@ -44,7 +45,9 @@ class FirebaseContactsRepository implements ContactsRepository {
           Contact(
             uid: key.toString(),
             displayName: displayName,
-            addedAt: DateTime.fromMillisecondsSinceEpoch(addedAtMs),
+            addedAt: DateTime.fromMillisecondsSinceEpoch(
+              addedAtMs,
+            ),
           ),
         );
       });
@@ -72,7 +75,9 @@ class FirebaseContactsRepository implements ContactsRepository {
   }
 
   @override
-  Future<ContactLookupResult?> lookupUserByUid(String uid) async {
+  Future<ContactLookupResult?> lookupUserByUid(
+    String uid,
+  ) async {
     final trimmed = uid.trim();
 
     if (trimmed.isEmpty) return null;
