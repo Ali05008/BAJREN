@@ -59,6 +59,24 @@
     "audit_logs": {
       ".read": "auth != null && (root.child('admin_roles').child(auth.uid).val() === 'ADMIN' || root.child('admin_roles').child(auth.uid).val() === 'SUPER_ADMIN')",
       ".write": false
+    },
+
+    "contacts": {
+      "$ownerUid": {
+        ".read": "auth != null && auth.uid === $ownerUid",
+        "$contactUid": {
+          ".write": "auth != null && (auth.uid === $ownerUid || auth.uid === $contactUid) && $ownerUid !== $contactUid && (!data.exists() || !newData.exists())",
+          ".validate": "newData.hasChildren(['addedAt', 'displayName']) && newData.child('addedAt').isNumber() && newData.child('displayName').isString() && newData.child('displayName').val().length > 0 && newData.child('displayName').val().length <= 100"
+        }
+      }
+    },
+
+    "public_profiles": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['displayName']) && newData.child('displayName').isString() && newData.child('displayName').val().length > 0 && newData.child('displayName').val().length <= 100"
+      }
     }
   }
 }
