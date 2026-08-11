@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'core/firebase/firebase_bootstrap.dart';
 import 'core/di/firebase_ready.dart';
+import 'core/firebase/firebase_bootstrap.dart';
+import 'core/navigation/app_shell.dart';
+import 'core/theme/app_theme.dart';
 import 'features/auth/email_link_deep_link_handler.dart';
 import 'features/auth/presentation/providers/auth_providers.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
 import 'features/calls/presentation/providers/call_providers.dart';
-import 'features/calls/presentation/screens/home_screen.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 final messengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -25,9 +26,6 @@ Future<void> main() async {
     ),
   );
 
-  // Only listen for real email-link deep links when Firebase is actually
-  // configured; the demo repository simulates the link entirely in
-  // memory and doesn't need OS-level deep link delivery.
   if (firebaseReady) {
     final handler = EmailLinkDeepLinkHandler(
       navigatorKey: navigatorKey,
@@ -44,7 +42,6 @@ class BajrenApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authAsync = ref.watch(authStateProvider);
 
-    // Keep signaling session in sync with auth
     ref.watch(signalingBootstrapProvider);
 
     return MaterialApp(
@@ -52,22 +49,10 @@ class BajrenApp extends ConsumerWidget {
       scaffoldMessengerKey: messengerKey,
       title: 'BAJREN',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF0D9488),
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF0D9488),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
       home: authAsync.when(
-        data: (user) => user == null ? const LoginScreen() : const HomeScreen(),
+        data: (user) => user == null ? const LoginScreen() : const AppShell(),
         loading: () => const Scaffold(
           body: Center(child: CircularProgressIndicator()),
         ),
