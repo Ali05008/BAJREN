@@ -152,3 +152,18 @@ jobs:
           name: bajren-release-aab
           path: build/app/outputs/bundle/release/app-release.aab
           retention-days: 30
+
+  deploy-hosting:
+    name: Deploy Firebase Hosting
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: bajren-25964
+          channelId: live
