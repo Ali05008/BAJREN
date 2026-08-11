@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../core/di/firebase_ready.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../contacts/presentation/screens/contacts_list_screen.dart';
 import '../../../reports/presentation/report_user_sheet.dart';
 import '../../domain/entities/call.dart';
 import '../providers/active_call_notifier.dart';
@@ -51,6 +52,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       appBar: AppBar(
         title: const Text('BAJREN'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.contacts_outlined),
+            tooltip: 'جهات الاتصال',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ContactsListScreen()),
+            ),
+          ),
           if (user != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
