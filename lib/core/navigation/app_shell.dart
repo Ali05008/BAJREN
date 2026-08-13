@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../features/calls/presentation/screens/home_screen.dart';
-import '../../features/chat/presentation/screens/chat_coming_soon_screen.dart';
+import '../../features/chat/presentation/screens/chat_list_screen.dart';
 import '../../features/contacts/presentation/screens/contacts_list_screen.dart';
 import '../../features/home/presentation/screens/home_dashboard_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
@@ -28,7 +28,7 @@ class _AppShellState extends State<AppShell> {
 
   static const _tabs = [
     HomeDashboardScreen(),
-    ChatComingSoonScreen(),
+    ChatListScreen(),
     ContactsListScreen(),
     HomeScreen(), // existing calls screen, unmodified logic
     ProfileScreen(),
