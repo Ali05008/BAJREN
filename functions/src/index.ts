@@ -579,3 +579,60 @@ export const submitReport = onCall(async (request) => {
 
   return { ok: true, reportId: reportRef.key };
 });
+
+// ---------------------------------------------------------------------------
+// Self-service account deletion
+// ---------------------------------------------------------------------------
+
+/**
+ * Permanently deletes the CALLING user's own account: their Firebase Auth
+ * record, RTDB profile (`users/{uid}`, `public_profiles/{uid}`), every
+ * contact relationship (both directions), any pending signaling data, and
+ * their admin role grant if they had one. Any moderation reports they
+ * filed or were the subject of are left untouched — those are the
+ * moderation team's audit trail, not the user's own data.
+ *
+ * Self-service only: a caller can never pass another uid in. Runs with
+ * the Admin SDK so it can clean up reverse-contact entries under other
+ * users' `contacts/{otherUid}/{uid}` paths, which RTDB rules correctly
+ * block the client from writing directly.
+ */
+export const deleteMyAccount = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in required.");
+  }
+  const uid = request.auth.uid;
+
+  const roleSnap = await db.ref(`users/${uid}/role`).once("value");
+  const actorRole = (isValidRole(roleSnap.val()) ? roleSnap.val() : "USER") as Role;
+
+  const contactsSnap = await db.ref(`contacts/${uid}`).once("value");
+  const updates: Record<string, unknown> = {
+    [`users/${uid}`]: null,
+    [`public_profiles/${uid}`]: null,
+    [`contacts/${uid}`]: null,
+    [`signaling/${uid}`]: null,
+    [`admin_roles/${uid}`]: null,
+  };
+
+  if (contactsSnap.exists()) {
+    const contacts = contactsSnap.val() as Record<string, unknown>;
+    for (const contactUid of Object.keys(contacts)) {
+      updates[`contacts/${contactUid}/${uid}`] = null;
+    }
+  }
+
+  await db.ref().update(updates);
+
+  await writeAudit({
+    actorId: uid,
+    actorRole,
+    action: "SELF_DELETE_ACCOUNT",
+    targetUserId: uid,
+    result: "SUCCESS",
+  });
+
+  await admin.auth().deleteUser(uid);
+
+  return { ok: true };
+});

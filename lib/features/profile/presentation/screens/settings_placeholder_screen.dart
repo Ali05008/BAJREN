@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 
-/// Settings screen structure only. Each section below is a real,
-/// navigable entry in the list, but the destinations are not implemented
-/// yet — this batch establishes the shape so later phases can fill in
-/// each section without restructuring the entry point.
+import 'account_screen.dart';
+
+/// Settings screen structure. Each section below is a real, navigable
+/// entry in the list. Sections that have a real destination navigate
+/// there; the rest still show "قريبًا" until their own phase lands.
 class SettingsPlaceholderScreen extends StatelessWidget {
   const SettingsPlaceholderScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final sections = <_SettingsSection>[
-      _SettingsSection('الحساب', Icons.account_circle_outlined),
+      _SettingsSection(
+        'الحساب',
+        Icons.account_circle_outlined,
+        builder: (_) => const AccountScreen(),
+      ),
       _SettingsSection('الخصوصية', Icons.lock_outline),
       _SettingsSection('الأمان', Icons.security_outlined),
       _SettingsSection('الإشعارات', Icons.notifications_outlined),
@@ -31,6 +36,12 @@ class SettingsPlaceholderScreen extends StatelessWidget {
             title: Text(section.title),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
+              if (section.builder != null) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: section.builder!),
+                );
+                return;
+              }
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('${section.title} — قريبًا')),
               );
@@ -43,7 +54,8 @@ class SettingsPlaceholderScreen extends StatelessWidget {
 }
 
 class _SettingsSection {
-  const _SettingsSection(this.title, this.icon);
+  const _SettingsSection(this.title, this.icon, {this.builder});
   final String title;
   final IconData icon;
+  final WidgetBuilder? builder;
 }
