@@ -12,7 +12,28 @@
           "package_name": "com.bajren.bajren"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "120840016556-bj33m3k0eudp06gubp6rfremm8kshs0u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bajren.bajren",
+            "certificate_hash": "24a171bd388b036ae97d603cdb6e400fdaf6bd19"
+          }
+        },
+        {
+          "client_id": "120840016556-gjih2ct1j798mfeods7q7k80smpei91l.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bajren.bajren",
+            "certificate_hash": "7c9923df231ab469793ea964d86b7ffb0a9a2237"
+          }
+        },
+        {
+          "client_id": "120840016556-fi6hiroedhmn1ip4vl8jvec9knd2ngp8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAumbWzsv_AzHR9852RuqqzFyBzsul_X90"
