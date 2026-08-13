@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../calls/domain/entities/call.dart';
+import '../../../calls/presentation/providers/active_call_notifier.dart';
+import '../../../calls/presentation/screens/home_screen.dart';
 import '../../../chat/presentation/screens/conversation_screen.dart';
 import '../../domain/contact.dart';
 import '../providers/contacts_providers.dart';
@@ -122,6 +125,26 @@ class ContactsListScreen extends ConsumerWidget {
     );
   }
 
+  void _startCall(
+    BuildContext context,
+    WidgetRef ref,
+    Contact contact,
+    CallType type,
+  ) {
+    final me = ref.read(currentUserProvider);
+    if (me == null) return;
+
+    ref.read(activeCallProvider.notifier).startOutgoingCall(
+          callerId: me.uid,
+          calleeId: contact.uid,
+          type: type,
+        );
+
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+    );
+  }
+
   void _showContactSheet(
     BuildContext context,
     WidgetRef ref,
@@ -151,6 +174,22 @@ class ContactsListScreen extends ConsumerWidget {
                     ),
                   ),
                 );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.call_outlined),
+              title: const Text('مكالمة صوتية'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _startCall(context, ref, contact, CallType.voice);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.videocam_outlined),
+              title: const Text('مكالمة فيديو'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _startCall(context, ref, contact, CallType.video);
               },
             ),
             ListTile(
