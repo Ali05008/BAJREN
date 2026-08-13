@@ -44,6 +44,8 @@ dependencies:
   app_links: ^6.3.3
   shared_preferences: ^2.3.3
 
+  # Google Sign-In
+  google_sign_in: ^6.2.1
 
   cupertino_icons: ^1.0.8
 
