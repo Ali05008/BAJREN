@@ -97,6 +97,7 @@ class WebRtcCallEngine implements CallEngine {
       payload: {
         'sdp': offer.sdp,
         'type': offer.type,
+        'callType': call.type.name,
       },
       fromUserId: call.callerId,
       toUserId: call.calleeId,

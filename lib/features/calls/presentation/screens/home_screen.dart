@@ -8,6 +8,7 @@ import '../../../../core/security/screen_capture_guard.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../reports/presentation/report_user_sheet.dart';
 import '../../domain/entities/call.dart';
+import '../../domain/entities/call_connection_state.dart';
 import '../providers/active_call_notifier.dart';
 import '../providers/call_providers.dart';
 
@@ -91,10 +92,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             builder: (context, snap) {
               final offer = snap.data;
               if (offer == null) return const SizedBox.shrink();
+              final incomingType = offer.payload['callType'] == 'voice'
+                  ? CallType.voice
+                  : CallType.video;
               return Material(
                 color: Colors.green.shade50,
                 child: ListTile(
-                  title: Text('Incoming call from ${offer.fromUserId}'),
+                  leading: Icon(
+                    incomingType == CallType.video
+                        ? Icons.videocam
+                        : Icons.call,
+                    color: Colors.green.shade700,
+                  ),
+                  title: Text('اتصال وارد من ${offer.fromUserId}'),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -102,7 +112,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         onPressed: () async {
                           final call = Call(
                             id: offer.callId,
-                            type: CallType.video,
+                            type: incomingType,
                             callerId: offer.fromUserId,
                             calleeId: user!.uid,
                             status: CallStatus.ringing,
@@ -115,7 +125,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 remoteOffer: offer.payload,
                               );
                         },
-                        child: const Text('Accept'),
+                        child: const Text('قبول'),
                       ),
                       TextButton(
                         onPressed: () {
@@ -123,7 +133,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               .read(callEngineProvider)
                               .rejectCall(offer.callId);
                         },
-                        child: const Text('Reject'),
+                        child: const Text('رفض'),
                       ),
                     ],
                   ),
@@ -222,39 +232,157 @@ class _IdleView extends StatelessWidget {
   }
 }
 
-class _CallView extends ConsumerWidget {
+class _CallView extends ConsumerStatefulWidget {
   const _CallView({required this.state, this.currentUserId});
 
   final dynamic state;
   final String? currentUserId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final media = state.media;
-    final connection = state.connection;
-    final Call call = state.call;
-    final otherUserId =
-        currentUserId == call.callerId ? call.calleeId : call.callerId;
+  ConsumerState<_CallView> createState() => _CallViewState();
+}
+
+class _CallViewState extends ConsumerState<_CallView> {
+  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
+  final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  bool _renderersReady = false;
+  bool _speakerOn = true;
+  MediaStream? _lastLocalStream;
+  MediaStream? _lastRemoteStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _initRenderers();
+  }
+
+  Future<void> _initRenderers() async {
+    // RTCVideoRenderer MUST be initialized before srcObject is ever set,
+    // otherwise flutter_webrtc throws "Call initialize before setting the
+    // stream" and crashes the whole call screen.
+    await _localRenderer.initialize();
+    await _remoteRenderer.initialize();
+    if (!mounted) return;
+    setState(() => _renderersReady = true);
+    _syncStreams();
+    // Default to speakerphone for video calls, earpiece for voice calls.
+    final call = widget.state.call as Call;
+    _speakerOn = call.type == CallType.video;
+    ref.read(activeCallProvider.notifier).setSpeaker(_speakerOn);
+  }
+
+  @override
+  void didUpdateWidget(covariant _CallView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_renderersReady) _syncStreams();
+  }
+
+  void _syncStreams() {
+    final media = widget.state.media;
+    final MediaStream? local = media.localStream;
+    final MediaStream? remote = media.remoteStream;
+    if (local != _lastLocalStream) {
+      _lastLocalStream = local;
+      _localRenderer.srcObject = local;
+    }
+    if (remote != _lastRemoteStream) {
+      _lastRemoteStream = remote;
+      _remoteRenderer.srcObject = remote;
+    }
+  }
+
+  @override
+  void dispose() {
+    _localRenderer.srcObject = null;
+    _remoteRenderer.srcObject = null;
+    _localRenderer.dispose();
+    _remoteRenderer.dispose();
+    super.dispose();
+  }
+
+  String _statusLabel(CallConnectionState connection, Call call) {
+    switch (connection.status) {
+      case CallStatus.idle:
+      case CallStatus.ringing:
+        return call.callerId == widget.currentUserId
+            ? 'جارٍ الاتصال...'
+            : 'اتصال وارد...';
+      case CallStatus.connecting:
+        return 'جارٍ الاتصال...';
+      case CallStatus.connected:
+        return connection.isReconnecting ? 'إعادة الاتصال...' : '';
+      case CallStatus.reconnecting:
+        return 'إعادة الاتصال...';
+      case CallStatus.ended:
+        return 'انتهت المكالمة';
+      case CallStatus.failed:
+        return connection.lastError ?? 'فشل الاتصال';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_renderersReady) {
+      return const ColoredBox(
+        color: Colors.black87,
+        child: Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+    }
+
+    _syncStreams();
+
+    final media = widget.state.media;
+    final CallConnectionState connection = widget.state.connection;
+    final Call call = widget.state.call;
+    final otherUserId = widget.currentUserId == call.callerId
+        ? call.calleeId
+        : call.callerId;
+    final hasRemoteVideo =
+        media.remoteStream != null && call.type == CallType.video;
+    final statusText = _statusLabel(connection, call);
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (media.remoteStream != null)
+        if (hasRemoteVideo)
           RTCVideoView(
-            RTCVideoRenderer()..srcObject = media.remoteStream,
+            _remoteRenderer,
             objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
           )
         else
           Container(
-            color: Colors.black87,
+            color: const Color(0xFF0F0F14),
             child: Center(
-              child: Text(
-                connection.status.toString().split('.').last,
-                style: const TextStyle(color: Colors.white70, fontSize: 18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    radius: 48,
+                    backgroundColor: Colors.white12,
+                    child: Text(
+                      otherUserId.isNotEmpty
+                          ? otherUserId.substring(0, 1).toUpperCase()
+                          : '؟',
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 32),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (statusText.isNotEmpty)
+                    Text(
+                      statusText,
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 18),
+                    ),
+                ],
               ),
             ),
           ),
-        if (media.localStream != null)
+        if (media.localStream != null &&
+            media.isCameraOn &&
+            call.type == CallType.video)
           Positioned(
             right: 16,
             top: 16,
@@ -263,7 +391,7 @@ class _CallView extends ConsumerWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: RTCVideoView(
-                RTCVideoRenderer()..srcObject = media.localStream,
+                _localRenderer,
                 mirror: true,
                 objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
               ),
@@ -287,6 +415,26 @@ class _CallView extends ConsumerWidget {
               ),
             ),
           ),
+        if (hasRemoteVideo && statusText.isNotEmpty)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 24,
+            child: Center(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black45,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  statusText,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+              ),
+            ),
+          ),
         Positioned(
           left: 0,
           right: 0,
@@ -301,23 +449,41 @@ class _CallView extends ConsumerWidget {
                     ref.read(activeCallProvider.notifier).toggleMute(),
               ),
               _RoundButton(
+                icon: _speakerOn ? Icons.volume_up : Icons.hearing,
+                color: Colors.white24,
+                onTap: () {
+                  setState(() => _speakerOn = !_speakerOn);
+                  ref
+                      .read(activeCallProvider.notifier)
+                      .setSpeaker(_speakerOn);
+                },
+              ),
+              _RoundButton(
                 icon: Icons.call_end,
                 color: Colors.red,
                 size: 64,
-                onTap: () => ref.read(activeCallProvider.notifier).endCall(),
+                onTap: () async {
+                  await ref.read(activeCallProvider.notifier).endCall();
+                  if (context.mounted && Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  }
+                },
               ),
-              _RoundButton(
-                icon: media.isCameraOn ? Icons.videocam : Icons.videocam_off,
-                color: media.isCameraOn ? Colors.white24 : Colors.red,
-                onTap: () =>
-                    ref.read(activeCallProvider.notifier).toggleCamera(),
-              ),
-              _RoundButton(
-                icon: Icons.cameraswitch,
-                color: Colors.white24,
-                onTap: () =>
-                    ref.read(activeCallProvider.notifier).switchCamera(),
-              ),
+              if (call.type == CallType.video)
+                _RoundButton(
+                  icon:
+                      media.isCameraOn ? Icons.videocam : Icons.videocam_off,
+                  color: media.isCameraOn ? Colors.white24 : Colors.red,
+                  onTap: () =>
+                      ref.read(activeCallProvider.notifier).toggleCamera(),
+                ),
+              if (call.type == CallType.video)
+                _RoundButton(
+                  icon: Icons.cameraswitch,
+                  color: Colors.white24,
+                  onTap: () =>
+                      ref.read(activeCallProvider.notifier).switchCamera(),
+                ),
             ],
           ),
         ),
