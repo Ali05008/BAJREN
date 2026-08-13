@@ -16,12 +16,18 @@ class AccountProfile {
   final String? username;
   final String? email;
   final String? displayName;
+  final String? bio;
+  final bool isVerified;
+  final bool discoverable;
 
   const AccountProfile({
     required this.uid,
     this.username,
     this.email,
     this.displayName,
+    this.bio,
+    this.isVerified = false,
+    this.discoverable = true,
   });
 }
 
@@ -62,6 +68,9 @@ class AccountRepository {
     String? username;
     String? email;
     String? displayName;
+    String? bio;
+    bool isVerified = false;
+    bool discoverable = true;
 
     late final StreamController<AccountProfile> controller;
     controller = StreamController<AccountProfile>.broadcast(
@@ -75,6 +84,9 @@ class AccountRepository {
           username: username,
           email: email,
           displayName: displayName,
+          bio: bio,
+          isVerified: isVerified,
+          discoverable: discoverable,
         ),
       );
     }
@@ -85,6 +97,7 @@ class AccountRepository {
       if (data is Map) {
         username = data['username'] as String?;
         email = data['email'] as String?;
+        discoverable = data['discoverable'] != false;
       }
       emit();
     }));
@@ -92,6 +105,8 @@ class AccountRepository {
       final data = event.snapshot.value;
       if (data is Map) {
         displayName = data['displayName'] as String?;
+        bio = data['bio'] as String?;
+        isVerified = data['isVerified'] == true;
       }
       emit();
     }));
@@ -165,6 +180,36 @@ class AccountRepository {
 
     await _auth.currentUser?.updateDisplayName(trimmed);
     await _publicProfileRef(uid).update({'displayName': trimmed});
+  }
+
+  /// Updates the short bio shown on the account screen. An empty string
+  /// clears it.
+  Future<void> updateBio({
+    required String uid,
+    required String bio,
+  }) async {
+    final trimmed = bio.trim();
+    if (trimmed.isEmpty) {
+      await _publicProfileRef(uid).child('bio').remove();
+      return;
+    }
+    if (trimmed.length > 300) {
+      throw const AccountException(
+          'invalid', 'النبذة طويلة جدًا (الحد الأقصى 300 حرف)');
+    }
+    await _publicProfileRef(uid).update({'bio': trimmed});
+  }
+
+  /// Controls whether other users can find this account to add as a
+  /// contact (`lookupUserByUid` reads `public_profiles/{uid}`, which RTDB
+  /// rules hide from everyone but the owner once this is false). Existing
+  /// contacts are unaffected — they already have a cached copy of the
+  /// display name and don't need to re-read this profile.
+  Future<void> updateDiscoverable({
+    required String uid,
+    required bool discoverable,
+  }) async {
+    await _userRef(uid).update({'discoverable': discoverable});
   }
 
   /// Permanently deletes the signed-in user's account: Firebase Auth

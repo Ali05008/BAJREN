@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'account_screen.dart';
+import 'security_screen.dart';
 
 /// Settings screen structure. Each section below is a real, navigable
 /// entry in the list. Sections that have a real destination navigate
@@ -17,7 +18,11 @@ class SettingsPlaceholderScreen extends StatelessWidget {
         builder: (_) => const AccountScreen(),
       ),
       _SettingsSection('الخصوصية', Icons.lock_outline),
-      _SettingsSection('الأمان', Icons.security_outlined),
+      _SettingsSection(
+        'الأمان',
+        Icons.security_outlined,
+        builder: (_) => const SecurityScreen(),
+      ),
       _SettingsSection('الإشعارات', Icons.notifications_outlined),
       _SettingsSection('المستخدمون المحظورون', Icons.block_outlined),
       _SettingsSection('عام', Icons.tune_outlined),

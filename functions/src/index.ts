@@ -397,6 +397,14 @@ export const adminSetVerified = onCall(async (request) => {
     updatedAt: nowIso(),
   });
 
+  // Mirror onto the public profile too — that's the only node regular
+  // (non-admin) clients are allowed to read for OTHER users, so it's
+  // what powers the checkmark badge shown in Contacts/Chat. RTDB rules
+  // block clients from ever writing this field themselves.
+  await db.ref(`public_profiles/${userId}`).update({
+    isVerified: verified,
+  });
+
   await writeAudit({
     actorId: request.auth!.uid,
     actorRole: callerRole,
@@ -633,6 +641,54 @@ export const deleteMyAccount = onCall(async (request) => {
   });
 
   await admin.auth().deleteUser(uid);
+
+  return { ok: true };
+});
+
+// ---------------------------------------------------------------------------
+// One-time first-admin bootstrap
+// ---------------------------------------------------------------------------
+
+/**
+ * Grants the CALLING user SUPER_ADMIN — but only if literally no admin
+ * exists yet anywhere in the project. Once any `admin_roles` entry
+ * exists, every future call fails with `failed-precondition`, permanently
+ * and automatically. This is the only way to create the very first
+ * admin: every other role-change path (`adminSetUserRole`) requires the
+ * caller to already be staff, which is impossible before anyone holds
+ * that role.
+ */
+export const bootstrapFirstSuperAdmin = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in required.");
+  }
+  const uid = request.auth.uid;
+
+  const existing = await db.ref("admin_roles").limitToFirst(1).once("value");
+  if (existing.exists()) {
+    throw new HttpsError(
+      "failed-precondition",
+      "An admin already exists — this can only be used once, ever."
+    );
+  }
+
+  const userRecord = await admin.auth().getUser(uid);
+  const existingClaims = userRecord.customClaims ?? {};
+  await admin.auth().setCustomUserClaims(uid, { ...existingClaims, role: "SUPER_ADMIN" });
+
+  await db.ref().update({
+    [`admin_roles/${uid}`]: "SUPER_ADMIN",
+    [`users/${uid}/role`]: "SUPER_ADMIN",
+    [`users/${uid}/updatedAt`]: nowIso(),
+  });
+
+  await writeAudit({
+    actorId: uid,
+    actorRole: "SUPER_ADMIN",
+    action: "BOOTSTRAP_FIRST_SUPER_ADMIN",
+    targetUserId: uid,
+    result: "SUCCESS",
+  });
 
   return { ok: true };
 });

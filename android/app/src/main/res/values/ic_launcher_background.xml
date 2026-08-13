@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches AppColors.nearBlack in lib/core/theme/app_colors.dart.
+         Keep these in sync if the brand background color ever changes. -->
+    <color name="ic_launcher_background">#0F0F14</color>
+</resources>

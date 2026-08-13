@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../chat/presentation/screens/conversation_screen.dart';
 import '../../domain/contact.dart';
 import '../providers/contacts_providers.dart';
 import 'add_contact_screen.dart';
@@ -124,6 +125,21 @@ class ContactsListScreen extends ConsumerWidget {
               leading: const Icon(Icons.person),
               title: Text(contact.displayName),
               subtitle: Text(contact.uid),
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat_bubble_outline),
+              title: const Text('إرسال رسالة'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ConversationScreen(
+                      otherUid: contact.uid,
+                      otherDisplayName: contact.displayName,
+                    ),
+                  ),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(

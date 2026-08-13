@@ -4,6 +4,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../core/di/firebase_ready.dart';
+import '../../../../core/security/screen_capture_guard.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../reports/presentation/report_user_sheet.dart';
 import '../../domain/entities/call.dart';
@@ -134,7 +135,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: activeCall.when(
               data: (state) {
                 if (state != null) {
-                  return _CallView(state: state, currentUserId: user?.uid);
+                  return ScreenCaptureGuard(
+                    child: _CallView(state: state, currentUserId: user?.uid),
+                  );
                 }
                 return _IdleView(
                   calleeController: _calleeController,

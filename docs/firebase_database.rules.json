@@ -77,6 +77,30 @@
         ".write": "auth != null && auth.uid === $uid",
         ".validate": "newData.hasChildren(['displayName']) && newData.child('displayName').isString() && newData.child('displayName').val().length > 0 && newData.child('displayName').val().length <= 100"
       }
+    },
+
+    "chats": {
+      "$chatId": {
+        ".read": "auth != null && ($chatId.beginsWith(auth.uid + '_') || $chatId.endsWith('_' + auth.uid))",
+        "messages": {
+          ".indexOn": ["sentAt"],
+          "$messageId": {
+            ".write": "auth != null && ($chatId.beginsWith(auth.uid + '_') || $chatId.endsWith('_' + auth.uid)) && !data.exists()",
+            ".validate": "newData.hasChildren(['senderId', 'text', 'sentAt']) && newData.child('senderId').val() === auth.uid && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 4000"
+          }
+        }
+      }
+    },
+
+    "user_chats": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".indexOn": ["lastMessageAt"],
+        "$chatId": {
+          ".write": "auth != null && ($chatId.beginsWith(auth.uid + '_') || $chatId.endsWith('_' + auth.uid)) && ($chatId.beginsWith($uid + '_') || $chatId.endsWith('_' + $uid))",
+          ".validate": "newData.hasChildren(['otherUid', 'otherDisplayName', 'lastMessage', 'lastMessageAt'])"
+        }
+      }
     }
   }
 }

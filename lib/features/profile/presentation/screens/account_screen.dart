@@ -1,3 +1,5 @@
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,6 +7,7 @@ import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../calls/presentation/providers/active_call_notifier.dart';
 import '../../data/account_repository.dart';
 import '../providers/account_providers.dart';
+import '../providers/verification_providers.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -27,6 +30,7 @@ class AccountScreen extends ConsumerWidget {
           final displayName = profile?.displayName ?? user.displayName ?? 'مستخدم';
           final username = profile?.username;
           final email = profile?.email;
+          final bio = profile?.bio;
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -41,10 +45,24 @@ class AccountScreen extends ConsumerWidget {
                         child: Icon(Icons.person, size: 40),
                       ),
                       const SizedBox(height: 12),
-                      Text(
-                        displayName,
-                        style: Theme.of(context).textTheme.titleLarge,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            displayName,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          VerifiedBadge(uid: user.uid, size: 20),
+                        ],
                       ),
+                      if (bio != null && bio.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          bio,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -63,6 +81,19 @@ class AccountScreen extends ConsumerWidget {
                         ref,
                         uid: user.uid,
                         current: displayName,
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.info_outline),
+                      title: const Text('النبذة'),
+                      subtitle: Text(bio?.isNotEmpty == true ? bio! : 'أضف نبذة قصيرة عن نفسك'),
+                      trailing: const Icon(Icons.edit_outlined),
+                      onTap: () => _editBio(
+                        context,
+                        ref,
+                        uid: user.uid,
+                        current: bio ?? '',
                       ),
                     ),
                     const Divider(height: 1),
@@ -100,11 +131,70 @@ class AccountScreen extends ConsumerWidget {
                   onTap: () => _confirmDeleteAccount(context, ref),
                 ),
               ),
+              const SizedBox(height: 24),
+              Center(
+                child: TextButton(
+                  onPressed: () => _bootstrapFirstAdmin(context, ref),
+                  child: Text(
+                    'تفعيل أول حساب أدمن',
+                    style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                  ),
+                ),
+              ),
             ],
           );
         },
       ),
     );
+  }
+
+  /// One-time-ever setup: grants SUPER_ADMIN to whoever taps this first,
+  /// as long as no admin exists yet anywhere in the project. Every call
+  /// after the first one fails on its own — see
+  /// functions/src/index.ts:bootstrapFirstSuperAdmin. Kept deliberately
+  /// unobtrusive since it only matters once, right after launch.
+  Future<void> _bootstrapFirstAdmin(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تفعيل أول حساب أدمن'),
+        content: const Text(
+          'هذا يمنح حسابك صلاحيات SUPER_ADMIN الكاملة. يعمل مرة واحدة فقط '
+          'طالما ما فيه أي أدمن بالمشروع — لو فيه أدمن أصلاً، بيفشل ولن '
+          'يغيّر شي.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('تفعيل'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await FirebaseFunctions.instance
+          .httpsCallable('bootstrapFirstSuperAdmin')
+          .call<dynamic>();
+      await FirebaseAuth.instance.currentUser?.getIdTokenResult(true);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم! أعد فتح التطبيق لتظهر لوحة التحكم.')),
+        );
+      }
+    } on FirebaseFunctionsException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message ?? 'فشل التفعيل')),
+        );
+      }
+    }
   }
 
   Future<void> _editDisplayName(
@@ -143,6 +233,48 @@ class AccountScreen extends ConsumerWidget {
             uid: uid,
             displayName: result,
           );
+    } on AccountException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    }
+  }
+
+  Future<void> _editBio(
+    BuildContext context,
+    WidgetRef ref, {
+    required String uid,
+    required String current,
+  }) async {
+    final controller = TextEditingController(text: current);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تعديل النبذة'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 3,
+          maxLength: 300,
+          decoration: const InputDecoration(hintText: 'نبذة قصيرة عنك'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: const Text('حفظ'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null || !context.mounted) return;
+
+    try {
+      await ref.read(accountRepositoryProvider).updateBio(uid: uid, bio: result);
     } on AccountException catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));

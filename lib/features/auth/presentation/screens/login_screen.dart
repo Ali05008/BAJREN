@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -70,10 +71,77 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await action();
     } catch (e) {
-      setState(() => _error = e.toString());
+      setState(() => _error = _friendlyError(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Maps raw exceptions (Firebase Auth codes, Google Sign-In
+  /// PlatformExceptions, our own manually-thrown Exceptions) to a short,
+  /// bilingual message a non-technical user can actually act on — instead
+  /// of dumping `e.toString()` (e.g. "PlatformException(sign_in_failed,
+  /// com.google.android.gms.common.api.ApiException: 10, null, null)")
+  /// straight into the UI.
+  String _friendlyError(Object e) {
+    if (e is FirebaseAuthException) {
+      switch (e.code) {
+        case 'user-not-found':
+        case 'invalid-credential':
+          return _t('البريد أو كلمة المرور غير صحيحة',
+              'Incorrect email or password');
+        case 'wrong-password':
+          return _t('كلمة المرور غير صحيحة', 'Incorrect password');
+        case 'invalid-email':
+          return _t(
+              'صيغة البريد الإلكتروني غير صحيحة', 'Invalid email format');
+        case 'email-already-in-use':
+          return _t(
+              'هذا البريد مستخدم بالفعل', 'This email is already in use');
+        case 'weak-password':
+          return _t('كلمة المرور ضعيفة جدًا', 'Password is too weak');
+        case 'user-disabled':
+          return _t(
+              'تم تعطيل هذا الحساب', 'This account has been disabled');
+        case 'too-many-requests':
+          return _t('محاولات كثيرة، حاول لاحقًا بعد قليل',
+              'Too many attempts, please try again later');
+        case 'network-request-failed':
+          return _t('تحقق من اتصال الإنترنت وحاول مرة أخرى',
+              'Check your internet connection and try again');
+        case 'operation-not-allowed':
+          return _t('طريقة الدخول هذه غير مفعّلة حاليًا',
+              'This sign-in method is currently disabled');
+        default:
+          return _t(
+              'حدث خطأ أثناء تسجيل الدخول', 'Something went wrong signing in');
+      }
+    }
+
+    final msg = e.toString();
+
+    if (msg.contains('ApiException: 10') || msg.contains('DEVELOPER_ERROR')) {
+      return _t('تسجيل الدخول عبر جوجل غير مهيأ بعد لهذا الإصدار',
+          "Google Sign-In isn't configured for this build yet");
+    }
+    if (msg.contains('ApiException: 12501') ||
+        msg.toLowerCase().contains('sign_in_canceled')) {
+      return _t('تم إلغاء تسجيل الدخول', 'Sign-in was cancelled');
+    }
+    if (msg.contains('ApiException: 7') ||
+        msg.toLowerCase().contains('network')) {
+      return _t('تحقق من اتصال الإنترنت وحاول مرة أخرى',
+          'Check your internet connection and try again');
+    }
+
+    // Our own manually-thrown Exception('...') messages already read
+    // fine as-is — just strip the "Exception: " prefix Dart adds.
+    if (msg.startsWith('Exception: ')) {
+      return msg.substring('Exception: '.length);
+    }
+
+    return _t('حدث خطأ غير متوقع، حاول مرة أخرى',
+        'An unexpected error occurred, please try again');
   }
 
   Future<void> _handleSignIn() async {
@@ -163,23 +231,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 12),
                   Center(
                     child: Container(
-                      width: 68,
-                      height: 68,
+                      width: 88,
+                      height: 88,
                       decoration: const BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [AppColors.cyan, AppColors.purple],
-                        ),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'B',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 30,
-                            fontWeight: FontWeight.w900,
+                        color: AppColors.nearBlack,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0x4022D3EE),
+                            blurRadius: 24,
+                            spreadRadius: 2,
                           ),
-                        ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(18),
+                      child: Image.asset(
+                        'assets/branding/bajren_logo.png',
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),

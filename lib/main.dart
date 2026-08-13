@@ -9,6 +9,7 @@ import 'features/auth/email_link_deep_link_handler.dart';
 import 'features/auth/presentation/providers/auth_providers.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
 import 'features/calls/presentation/providers/call_providers.dart';
+import 'features/splash/presentation/screens/splash_screen.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 final messengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -53,9 +54,7 @@ class BajrenApp extends ConsumerWidget {
       darkTheme: AppTheme.dark,
       home: authAsync.when(
         data: (user) => user == null ? const LoginScreen() : const AppShell(),
-        loading: () => const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        ),
+        loading: () => const SplashScreen(),
         error: (e, _) => Scaffold(
           body: Center(child: Text('Auth error: $e')),
         ),
