@@ -1,0 +1,52 @@
+{
+  "@@locale": "ar",
+
+  "appName": "باجرن",
+
+  "loginTitle": "تسجيل الدخول",
+  "loginSubtitle": "سجّل دخولك للمتابعة في باجرن",
+  "emailOrUsernameLabel": "البريد الإلكتروني أو اسم المستخدم",
+  "emailOrUsernameHint": "example@email.com أو username",
+  "passwordLabel": "كلمة المرور",
+  "passwordHint": "أدخل كلمة المرور",
+  "forgotPassword": "نسيت كلمة المرور؟",
+  "loginButton": "دخول",
+  "orDivider": "أو",
+  "continueWithGoogle": "المتابعة عبر جوجل",
+  "signInWithLinkButton": "الدخول برابط سريع عبر البريد",
+  "noAccountPrompt": "ليس لديك حساب؟",
+  "createAccountLink": "أنشئ حسابًا",
+
+  "registerTitle": "إنشاء حساب جديد",
+  "registerSubtitle": "انضم إلى باجرن الآن",
+  "fullNameLabel": "الاسم الكامل",
+  "fullNameHint": "اكتب اسمك الكامل",
+  "emailLabel": "البريد الإلكتروني",
+  "emailHint": "example@email.com",
+  "usernameLabel": "اسم المستخدم",
+  "usernameHint": "username",
+  "confirmPasswordLabel": "تأكيد كلمة المرور",
+  "confirmPasswordHint": "أعد إدخال كلمة المرور",
+  "registerButton": "إنشاء الحساب",
+  "haveAccountPrompt": "لديك حساب بالفعل؟",
+  "loginLink": "سجّل الدخول",
+  "termsAgreementPrefix": "أوافق على ",
+  "termsAndConditions": "الشروط والأحكام",
+  "andPrivacyPolicy": " وسياسة الخصوصية",
+
+  "emailLinkSentTitle": "تم إرسال الرابط",
+  "emailLinkSentMessage": "تحقق من بريدك الإلكتروني واضغط على الرابط لإكمال تسجيل الدخول",
+  "resendLink": "إعادة إرسال الرابط",
+
+  "errorInvalidEmail": "البريد الإلكتروني غير صحيح",
+  "errorWeakPassword": "كلمة المرور ضعيفة جدًا، استخدم 6 أحرف على الأقل",
+  "errorEmailInUse": "هذا البريد الإلكتروني مستخدم بالفعل",
+  "errorUserNotFound": "لا يوجد حساب بهذا البريد أو اسم المستخدم",
+  "errorWrongPassword": "كلمة المرور غير صحيحة",
+  "errorPasswordMismatch": "كلمتا المرور غير متطابقتين",
+  "errorFieldRequired": "هذا الحقل مطلوب",
+  "errorMustAgreeTerms": "يجب الموافقة على الشروط والأحكام للمتابعة",
+  "errorGeneric": "حدث خطأ ما، حاول مرة أخرى",
+
+  "languageMenuLabel": "اللغة"
+}

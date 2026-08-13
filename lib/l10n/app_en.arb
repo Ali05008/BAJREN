@@ -1,0 +1,52 @@
+{
+  "@@locale": "en",
+
+  "appName": "BAJREN",
+
+  "loginTitle": "Sign In",
+  "loginSubtitle": "Sign in to continue to BAJREN",
+  "emailOrUsernameLabel": "Email or username",
+  "emailOrUsernameHint": "example@email.com or username",
+  "passwordLabel": "Password",
+  "passwordHint": "Enter your password",
+  "forgotPassword": "Forgot password?",
+  "loginButton": "Sign In",
+  "orDivider": "or",
+  "continueWithGoogle": "Continue with Google",
+  "signInWithLinkButton": "Sign in with an email link",
+  "noAccountPrompt": "Don't have an account?",
+  "createAccountLink": "Create one",
+
+  "registerTitle": "Create Account",
+  "registerSubtitle": "Join BAJREN now",
+  "fullNameLabel": "Full name",
+  "fullNameHint": "Enter your full name",
+  "emailLabel": "Email",
+  "emailHint": "example@email.com",
+  "usernameLabel": "Username",
+  "usernameHint": "username",
+  "confirmPasswordLabel": "Confirm password",
+  "confirmPasswordHint": "Re-enter your password",
+  "registerButton": "Create Account",
+  "haveAccountPrompt": "Already have an account?",
+  "loginLink": "Sign in",
+  "termsAgreementPrefix": "I agree to the ",
+  "termsAndConditions": "Terms and Conditions",
+  "andPrivacyPolicy": " and Privacy Policy",
+
+  "emailLinkSentTitle": "Link sent",
+  "emailLinkSentMessage": "Check your email and tap the link to finish signing in",
+  "resendLink": "Resend link",
+
+  "errorInvalidEmail": "Invalid email address",
+  "errorWeakPassword": "Password is too weak, use at least 6 characters",
+  "errorEmailInUse": "This email is already in use",
+  "errorUserNotFound": "No account found with this email or username",
+  "errorWrongPassword": "Incorrect password",
+  "errorPasswordMismatch": "Passwords do not match",
+  "errorFieldRequired": "This field is required",
+  "errorMustAgreeTerms": "You must agree to the terms to continue",
+  "errorGeneric": "Something went wrong, please try again",
+
+  "languageMenuLabel": "Language"
+}
