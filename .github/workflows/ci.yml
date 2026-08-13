@@ -127,6 +127,10 @@ jobs:
         working-directory: functions
         run: npm install
 
+      - name: Build functions (tsc)
+        working-directory: functions
+        run: npm run build
+
       - name: Configure Firebase service account
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
