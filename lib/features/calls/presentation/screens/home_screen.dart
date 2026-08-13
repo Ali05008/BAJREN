@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../../../core/di/firebase_ready.dart';
 import '../../../../core/security/screen_capture_guard.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../contacts/presentation/providers/contacts_providers.dart';
 import '../../../reports/presentation/report_user_sheet.dart';
 import '../../domain/entities/call.dart';
 import '../../domain/entities/call_connection_state.dart';
@@ -22,6 +23,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _calleeController = TextEditingController();
   bool _video = true;
+  bool _resolvingCallee = false;
+  String? _dismissedOfferCallId;
 
   @override
   void initState() {
@@ -37,6 +40,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void dispose() {
     _calleeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _startCall() async {
+    final me = ref.read(currentUserProvider);
+    if (me == null) return;
+
+    final input = _calleeController.text.trim();
+    if (input.isEmpty) return;
+
+    String calleeUid = input;
+    if (input.contains('@')) {
+      setState(() => _resolvingCallee = true);
+      final resolved =
+          await ref.read(emailIndexServiceProvider).resolveUidByEmail(input);
+      if (!mounted) return;
+      setState(() => _resolvingCallee = false);
+
+      if (resolved == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لا يوجد مستخدم مسجّل بهذا البريد الإلكتروني.'),
+          ),
+        );
+        return;
+      }
+      calleeUid = resolved;
+    }
+
+    ref.read(activeCallProvider.notifier).startOutgoingCall(
+          callerId: me.uid,
+          calleeId: calleeUid,
+          type: _video ? CallType.video : CallType.voice,
+        );
   }
 
   @override
@@ -91,7 +127,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             stream: session.incomingOffers,
             builder: (context, snap) {
               final offer = snap.data;
-              if (offer == null) return const SizedBox.shrink();
+              if (offer == null || offer.callId == _dismissedOfferCallId) {
+                return const SizedBox.shrink();
+              }
               final incomingType = offer.payload['callType'] == 'voice'
                   ? CallType.voice
                   : CallType.video;
@@ -110,6 +148,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     children: [
                       TextButton(
                         onPressed: () async {
+                          setState(() => _dismissedOfferCallId = offer.callId);
                           final call = Call(
                             id: offer.callId,
                             type: incomingType,
@@ -129,6 +168,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       TextButton(
                         onPressed: () {
+                          setState(() => _dismissedOfferCallId = offer.callId);
                           ref
                               .read(callEngineProvider)
                               .rejectCall(offer.callId);
@@ -152,16 +192,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 return _IdleView(
                   calleeController: _calleeController,
                   video: _video,
+                  loading: _resolvingCallee,
                   onVideoChanged: (v) => setState(() => _video = v),
-                  onStart: () {
-                    final me = user;
-                    if (me == null) return;
-                    ref.read(activeCallProvider.notifier).startOutgoingCall(
-                          callerId: me.uid,
-                          calleeId: _calleeController.text.trim(),
-                          type: _video ? CallType.video : CallType.voice,
-                        );
-                  },
+                  onStart: _startCall,
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -178,12 +211,14 @@ class _IdleView extends StatelessWidget {
   const _IdleView({
     required this.calleeController,
     required this.video,
+    required this.loading,
     required this.onVideoChanged,
     required this.onStart,
   });
 
   final TextEditingController calleeController;
   final bool video;
+  final bool loading;
   final ValueChanged<bool> onVideoChanged;
   final VoidCallback onStart;
 
@@ -195,33 +230,41 @@ class _IdleView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Text(
-            'Start a call',
+            'بدء مكالمة',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           const Text(
-            'Enter the other user\'s Firebase uid',
+            'أدخل البريد الإلكتروني للشخص الذي تريد الاتصال به (أو UID)',
             style: TextStyle(color: Colors.grey),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
           TextField(
             controller: calleeController,
+            keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(
-              labelText: 'Callee UID',
+              labelText: 'البريد الإلكتروني أو UID',
               border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
           SwitchListTile(
-            title: const Text('Video call'),
+            title: const Text('مكالمة فيديو'),
             value: video,
             onChanged: onVideoChanged,
           ),
           const SizedBox(height: 24),
           FilledButton.icon(
-            onPressed: onStart,
-            icon: Icon(video ? Icons.videocam : Icons.call),
-            label: Text(video ? 'Start Video Call' : 'Start Voice Call'),
+            onPressed: loading ? null : onStart,
+            icon: loading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Icon(video ? Icons.videocam : Icons.call),
+            label: Text(video ? 'بدء مكالمة فيديو' : 'بدء مكالمة صوتية'),
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(48),
             ),

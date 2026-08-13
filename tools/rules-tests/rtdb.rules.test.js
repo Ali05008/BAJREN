@@ -271,3 +271,57 @@ describe("reports — client cannot write directly (submitReport callable only)"
     });
   });
 });
+
+describe("email_index — email-to-uid lookup for Contacts/Calls 'find by email'", () => {
+  const EMAIL = "Test.User@Example.com";
+  // Must mirror EmailIndexService.keyFor: lowercase, '.' -> ','
+  const EMAIL_KEY = "test,user@example,com";
+
+  function userDbWithEmail(uid, email) {
+    return testEnv.authenticatedContext(uid, { email }).database();
+  }
+
+  it("USER can write their own email -> uid mapping", async () => {
+    await assertSucceeds(
+      userDbWithEmail(UID, EMAIL).ref(`email_index/${EMAIL_KEY}`).set(UID)
+    );
+  });
+
+  it("USER cannot write a mapping under someone else's email", async () => {
+    await assertFails(
+      userDbWithEmail(UID, "someone-else@example.com")
+        .ref(`email_index/${EMAIL_KEY}`)
+        .set(UID)
+    );
+  });
+
+  it("USER cannot point their own email at a different uid than their own", async () => {
+    await assertFails(
+      userDbWithEmail(UID, EMAIL).ref(`email_index/${EMAIL_KEY}`).set(OTHER_UID)
+    );
+  });
+
+  it("USER cannot hijack another account's already-claimed email mapping", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.database().ref(`email_index/${EMAIL_KEY}`).set(OTHER_UID);
+    });
+    await assertFails(
+      userDbWithEmail(UID, EMAIL).ref(`email_index/${EMAIL_KEY}`).set(UID)
+    );
+  });
+
+  it("Any signed-in user CAN read the index (needed to look someone up by email)", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.database().ref(`email_index/${EMAIL_KEY}`).set(UID);
+    });
+    await assertSucceeds(
+      testEnv.authenticatedContext(OTHER_UID).database().ref(`email_index/${EMAIL_KEY}`).once("value")
+    );
+  });
+
+  it("A signed-out client cannot read or write the index", async () => {
+    const anonDb = testEnv.unauthenticatedContext().database();
+    await assertFails(anonDb.ref(`email_index/${EMAIL_KEY}`).once("value"));
+    await assertFails(anonDb.ref(`email_index/${EMAIL_KEY}`).set(UID));
+  });
+});

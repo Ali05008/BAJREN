@@ -89,6 +89,14 @@
       }
     },
 
+    "email_index": {
+      "$emailKey": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.token.email != null && $emailKey === auth.token.email.replace('.', ',').toLowerCase()",
+        ".validate": "newData.isString() && newData.val() === auth.uid"
+      }
+    },
+
     "chats": {
       "$chatId": {
         ".read": "auth != null && ($chatId.beginsWith(auth.uid + '_') || $chatId.endsWith('_' + auth.uid))",

@@ -17,6 +17,7 @@ class ContactsListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(publicProfileSyncProvider);
+    ref.watch(emailIndexSyncProvider);
 
     final contactsAsync = ref.watch(contactsListProvider);
 

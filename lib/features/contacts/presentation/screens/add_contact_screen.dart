@@ -26,8 +26,8 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
   }
 
   Future<void> _search() async {
-    final uid = _uidController.text.trim();
-    if (uid.isEmpty) return;
+    final input = _uidController.text.trim();
+    if (input.isEmpty) return;
 
     setState(() {
       _loading = true;
@@ -36,6 +36,21 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
     });
 
     final me = ref.read(currentUserProvider);
+    final isEmail = input.contains('@');
+
+    String? uid = input;
+    if (isEmail) {
+      uid = await ref
+          .read(emailIndexServiceProvider)
+          .resolveUidByEmail(input);
+      if (uid == null) {
+        setState(() {
+          _loading = false;
+          _error = 'لا يوجد مستخدم مسجّل بهذا البريد الإلكتروني.';
+        });
+        return;
+      }
+    }
 
     if (me != null && uid == me.uid) {
       setState(() {
@@ -134,14 +149,15 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'أدخل معرف المستخدم (UID) الذي تريد إضافته.',
+              'أدخل البريد الإلكتروني للشخص الذي تريد إضافته (أو معرف المستخدم UID).',
               style: TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _uidController,
+              keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
-                labelText: 'معرف المستخدم',
+                labelText: 'البريد الإلكتروني أو UID',
                 border: OutlineInputBorder(),
               ),
               onSubmitted: (_) => _search(),
