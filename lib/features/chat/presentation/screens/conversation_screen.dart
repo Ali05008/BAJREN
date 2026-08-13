@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../contacts/presentation/providers/contacts_providers.dart';
+import '../../../contacts/presentation/widgets/verified_badge.dart';
 import '../../domain/message.dart';
 import '../providers/chat_providers.dart';
 
@@ -65,7 +67,24 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     final messagesAsync = ref.watch(messagesProvider(chatId));
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.otherDisplayName)),
+      appBar: AppBar(
+        title: Consumer(
+          builder: (context, ref, _) {
+            final isVerifiedAsync = ref.watch(isVerifiedProvider(widget.otherUid));
+            final isVerified = isVerifiedAsync.asData?.value ?? false;
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(child: Text(widget.otherDisplayName)),
+                if (isVerified) ...[
+                  const SizedBox(width: 4),
+                  const VerifiedBadge(size: 18),
+                ],
+              ],
+            );
+          },
+        ),
+      ),
       body: Column(
         children: [
           Expanded(

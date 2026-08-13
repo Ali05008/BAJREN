@@ -1,3 +1,4 @@
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/presentation/providers/auth_providers.dart';
@@ -26,4 +27,16 @@ final publicProfileSyncProvider = FutureProvider<void>((ref) async {
     uid: user.uid,
     displayName: user.displayName ?? user.uid,
   );
+});
+
+/// Streams whether a given uid's public profile is verified. Used to show
+/// the checkmark badge in Contacts and Chat without touching the base
+/// Contact stream (public_profiles/isVerified is only ever written by
+/// the adminSetVerified Cloud Function).
+final isVerifiedProvider =
+    StreamProvider.family<bool, String>((ref, uid) {
+  return FirebaseDatabase.instance
+      .ref('public_profiles/$uid/isVerified')
+      .onValue
+      .map((event) => event.snapshot.value == true);
 });

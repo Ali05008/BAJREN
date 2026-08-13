@@ -107,6 +107,9 @@ class _AddContactScreenState extends ConsumerState<AddContactScreen> {
           case 'duplicate':
             _error = 'تمت إضافة جهة الاتصال هذه من قبل.';
             break;
+          case 'privacy-blocked':
+            _error = 'هذا المستخدم لا يسمح بإضافته كجهة اتصال.';
+            break;
           default:
             _error = 'تعذّرت إضافة جهة الاتصال، حاول مرة أخرى.';
         }

@@ -1,14 +1,21 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 
+import '../../profile/data/firebase_privacy_repository.dart';
+import '../../profile/domain/privacy_repository.dart';
 import '../domain/contact.dart';
 import '../domain/contacts_repository.dart';
 
 class FirebaseContactsRepository implements ContactsRepository {
-  FirebaseContactsRepository({FirebaseDatabase? database})
-      : _db = database ?? FirebaseDatabase.instance;
+  FirebaseContactsRepository({
+    FirebaseDatabase? database,
+    PrivacyRepository? privacyRepository,
+  })  : _db = database ?? FirebaseDatabase.instance,
+        _privacy = privacyRepository ??
+            FirebasePrivacyRepository(database: database);
 
   final FirebaseDatabase _db;
+  final PrivacyRepository _privacy;
 
   DatabaseReference get _contactsRoot => _db.ref('contacts');
 
@@ -117,6 +124,18 @@ class FirebaseContactsRepository implements ContactsRepository {
       );
     }
 
+    // Respect the target's "من يقدر يضيفني كجهة اتصال" setting before even
+    // attempting the write, so the person gets a clear message instead of
+    // a generic RTDB permission-denied error. The RTDB rules enforce the
+    // same check server-side, so this can't be bypassed by a modified client.
+    final targetPermission = await _privacy.getAllowContactBy(contactUid);
+    if (targetPermission == ContactPermission.nobody) {
+      throw const ContactException(
+        'privacy-blocked',
+        'This user does not allow being added as a contact.',
+      );
+    }
+
     final existing = await _contactsRoot
         .child(ownerUid)
         .child(contactUid)
@@ -147,8 +166,8 @@ class FirebaseContactsRepository implements ContactsRepository {
     } on FirebaseException catch (e) {
       if (e.code == 'permission-denied') {
         throw const ContactException(
-          'duplicate',
-          'This contact has already been added.',
+          'privacy-blocked',
+          'This user does not allow being added as a contact.',
         );
       }
 

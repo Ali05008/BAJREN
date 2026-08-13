@@ -65,8 +65,18 @@
       "$ownerUid": {
         ".read": "auth != null && auth.uid === $ownerUid",
         "$contactUid": {
-          ".write": "auth != null && (auth.uid === $ownerUid || auth.uid === $contactUid) && $ownerUid !== $contactUid && (!data.exists() || !newData.exists())",
+          ".write": "auth != null && (auth.uid === $ownerUid || auth.uid === $contactUid) && $ownerUid !== $contactUid && (!data.exists() || !newData.exists()) && (auth.uid === $ownerUid || newData.exists() == false || root.child('privacy').child($ownerUid).child('allowContactBy').val() !== 'nobody')",
           ".validate": "newData.hasChildren(['addedAt', 'displayName']) && newData.child('addedAt').isNumber() && newData.child('displayName').isString() && newData.child('displayName').val().length > 0 && newData.child('displayName').val().length <= 100"
+        }
+      }
+    },
+
+    "privacy": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid",
+        "allowContactBy": {
+          ".validate": "newData.val() === 'all' || newData.val() === 'nobody'"
         }
       }
     },

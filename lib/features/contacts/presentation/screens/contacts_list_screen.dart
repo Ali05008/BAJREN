@@ -5,6 +5,7 @@ import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../chat/presentation/screens/conversation_screen.dart';
 import '../../domain/contact.dart';
 import '../providers/contacts_providers.dart';
+import '../widgets/verified_badge.dart';
 import 'add_contact_screen.dart';
 
 class ContactsListScreen extends ConsumerWidget {
@@ -80,6 +81,8 @@ class ContactsListScreen extends ConsumerWidget {
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) {
               final contact = contacts[index];
+              final isVerifiedAsync = ref.watch(isVerifiedProvider(contact.uid));
+              final isVerified = isVerifiedAsync.asData?.value ?? false;
 
               return ListTile(
                 leading: CircleAvatar(
@@ -89,7 +92,16 @@ class ContactsListScreen extends ConsumerWidget {
                         : '?',
                   ),
                 ),
-                title: Text(contact.displayName),
+                title: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(child: Text(contact.displayName)),
+                    if (isVerified) ...[
+                      const SizedBox(width: 4),
+                      const VerifiedBadge(),
+                    ],
+                  ],
+                ),
                 subtitle: Text(contact.uid),
                 onTap: () => _showContactSheet(
                   context,

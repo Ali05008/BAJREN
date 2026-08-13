@@ -25,6 +25,8 @@ abstract class ContactsRepository {
 
   Future<ContactLookupResult?> lookupUserByUid(String uid);
 
+  /// Throws [ContactException] with code 'self-add', 'duplicate', or
+  /// 'privacy-blocked' (target set "من يقدر يضيفني كجهة اتصال" to "لا أحد").
   Future<void> addContact({
     required String ownerUid,
     required String contactUid,
