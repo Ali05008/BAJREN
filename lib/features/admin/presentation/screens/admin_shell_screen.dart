@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/admin_permission.dart';
 import '../../domain/entities/user_role.dart';
 import '../providers/admin_providers.dart';
+import 'admin_admins_screen.dart';
 import 'admin_audit_logs_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_reports_screen.dart';
@@ -102,6 +103,20 @@ class AdminShellScreen extends ConsumerWidget {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => const AdminReportsScreen(),
+                        ),
+                      );
+                      return;
+                    }
+                    if (s == 'Admins') {
+                      if (!access.can(AdminPermission.manageRoles)) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Missing MANAGE_ROLES')),
+                        );
+                        return;
+                      }
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const AdminAdminsScreen(),
                         ),
                       );
                       return;
